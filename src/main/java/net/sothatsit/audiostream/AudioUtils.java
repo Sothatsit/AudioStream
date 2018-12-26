@@ -1,0 +1,115 @@
+package net.sothatsit.audiostream;
+
+import javax.sound.sampled.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+
+/**
+ * Some useful audio functions.
+ *
+ * @author Paddy Lamont
+ */
+public class AudioUtils {
+
+    public static Mixer.Info getMixer(String name) {
+        for (Mixer.Info info : AudioSystem.getMixerInfo()) {
+            if (info.getName().equals(name))
+                return info;
+        }
+        return null;
+    }
+
+    public static Mixer.Info[] getOutputMixers() {
+        List<Mixer.Info> mixers = new ArrayList<>();
+
+        for (Mixer.Info mixerInfo : AudioSystem.getMixerInfo()) {
+            if (getOutputFormats(mixerInfo).length == 0)
+                continue;
+
+            mixers.add(mixerInfo);
+        }
+
+        return mixers.toArray(new Mixer.Info[mixers.size()]);
+    }
+
+    public static AudioFormat[] getOutputFormats(Mixer.Info mixerInfo) {
+        Mixer mixer = AudioSystem.getMixer(mixerInfo);
+
+        List<AudioFormat> formats = new ArrayList<>();
+        for (Line.Info lineInfo : mixer.getSourceLineInfo()) {
+            if (!(lineInfo instanceof DataLine.Info))
+                continue;
+
+            AudioFormat[] lineFormats = ((DataLine.Info) lineInfo).getFormats();
+            formats.addAll(Arrays.asList(lineFormats));
+        }
+
+        return formats.toArray(new AudioFormat[formats.size()]);
+    }
+
+    public static Mixer.Info[] getInputMixers() {
+        List<Mixer.Info> mixers = new ArrayList<>();
+
+        for (Mixer.Info mixerInfo : AudioSystem.getMixerInfo()) {
+            if (getInputFormats(mixerInfo).length == 0)
+                continue;
+
+            mixers.add(mixerInfo);
+        }
+
+        return mixers.toArray(new Mixer.Info[mixers.size()]);
+    }
+
+    public static AudioFormat[] getInputFormats(Mixer.Info mixerInfo) {
+        Mixer mixer = AudioSystem.getMixer(mixerInfo);
+
+        List<AudioFormat> formats = new ArrayList<>();
+        for (Line.Info lineInfo : mixer.getTargetLineInfo()) {
+            if (!(lineInfo instanceof DataLine.Info))
+                continue;
+
+            AudioFormat[] lineFormats = ((DataLine.Info) lineInfo).getFormats();
+            formats.addAll(Arrays.asList(lineFormats));
+        }
+
+        return formats.toArray(new AudioFormat[formats.size()]);
+    }
+
+    public static void displayMixerInfo() {
+        Mixer.Info [] mixersInfo = AudioSystem.getMixerInfo();
+
+        for (Mixer.Info mixerInfo : mixersInfo)
+        {
+            System.out.println("Mixer: " + mixerInfo.getName());
+
+            Mixer mixer = AudioSystem.getMixer(mixerInfo);
+
+            Line.Info [] sourceLineInfo = mixer.getSourceLineInfo();
+            for (Line.Info info : sourceLineInfo) {
+                System.out.println("  source");
+                showLineInfo(info);
+            }
+
+            Line.Info [] targetLineInfo = mixer.getTargetLineInfo();
+            for (Line.Info info : targetLineInfo) {
+                System.out.println("  target");
+                showLineInfo(info);
+            }
+        }
+    }
+
+
+    private static void showLineInfo(final Line.Info lineInfo) {
+        System.out.println("  " + lineInfo.toString());
+
+        if (lineInfo instanceof DataLine.Info)
+        {
+            DataLine.Info dataLineInfo = (DataLine.Info)lineInfo;
+
+            AudioFormat[] formats = dataLineInfo.getFormats();
+            for (final AudioFormat format : formats)
+                System.out.println("    " + format.toString());
+        }
+    }
+}
