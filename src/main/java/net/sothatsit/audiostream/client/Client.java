@@ -99,6 +99,8 @@ public class Client extends Thread {
         outLine.open(settings.format, settings.bufferSize);
         outLine.start();
 
+        int frameSize = settings.format.getFrameSize();
+
         while (isRunning()) {
             Socket socket = null;
             try {
@@ -108,17 +110,30 @@ public class Client extends Thread {
                 setConnected(true);
 
                 byte[] buffer = new byte[settings.bufferSize];
+                int totalBytes = 0;
+
                 StreamMonitor monitor = settings.createStreamMonitor();
                 while (isRunning()) {
-                    int read = stream.read(buffer);
+                    int read = stream.read(buffer, totalBytes, buffer.length - totalBytes);
                     if (read < 0)
                         break;
 
-                    if (read == 0)
+                    totalBytes += read;
+                    int totalFrames = totalBytes / frameSize;
+
+                    if (totalFrames == 0)
                         continue;
 
-                    outLine.write(buffer, 0, read);
-                    setStatus(monitor.update(buffer, 0, read));
+                    int frameAlignedBytes = totalFrames * frameSize;
+
+                    outLine.write(buffer, 0, frameAlignedBytes);
+                    setStatus(monitor.update(buffer, 0, frameAlignedBytes));
+
+                    int leftOver = totalBytes - frameAlignedBytes;
+                    if (leftOver > 0) {
+                        System.arraycopy(buffer, frameAlignedBytes, buffer, 0, leftOver);
+                    }
+                    totalBytes = leftOver;
                 }
             } catch (ConnectException exception) {
                 // If there was an error connecting to the server, sleep and try again
