@@ -15,7 +15,7 @@ public class AudioStreamGUI {
 
     public AudioStreamGUI() {
         this.frame = new JFrame(AudioStream.TITLE);
-        this.frame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
+        this.frame.setDefaultCloseOperation(WindowConstants.HIDE_ON_CLOSE);
 
         JTabbedPane pane = new JTabbedPane();
 
@@ -23,11 +23,20 @@ public class AudioStreamGUI {
         pane.add("Server", new ServerGUI());
 
         frame.add(pane);
+        frame.pack();
+        frame.setLocationRelativeTo(null);
+    }
+
+    public JFrame getFrame() {
+        return frame;
     }
 
     public void show() {
-        frame.pack();
-        frame.setLocationRelativeTo(null);
-        frame.setVisible(true);
+        if (!frame.isVisible()) {
+            frame.setVisible(true);
+        } else {
+            frame.toFront();
+            frame.requestFocus();
+        }
     }
 }

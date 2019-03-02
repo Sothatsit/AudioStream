@@ -3,11 +3,13 @@ package net.sothatsit.audiostream;
 import net.sothatsit.audiostream.client.Client;
 import net.sothatsit.audiostream.client.ClientSettings;
 import net.sothatsit.audiostream.gui.AudioStreamGUI;
-import net.sothatsit.audiostream.gui.ClientGUI;
+import net.sothatsit.audiostream.gui.AudioStreamTrayIcon;
 import net.sothatsit.audiostream.server.Server;
 import net.sothatsit.audiostream.server.ServerSettings;
 
 import javax.sound.sampled.AudioFormat;
+import java.awt.*;
+import java.awt.event.*;
 
 /**
  * The entry point to the AudioStream application.
@@ -46,8 +48,32 @@ public class Main {
             return;
         }
 
+        AudioStreamGUI gui = new AudioStreamGUI();
+        AudioStreamTrayIcon icon = new AudioStreamTrayIcon();
+
+        MenuItem openItem = new MenuItem("Open GUI");
+        openItem.addActionListener(e -> gui.show());
+
+        gui.getFrame().addComponentListener(new ComponentAdapter() {
+            public void componentHidden(ComponentEvent e) {
+                openItem.setEnabled(true);
+            }
+            public void componentShown(ComponentEvent e) {
+                openItem.setEnabled(false);
+            }
+        });
+
+        MenuItem quitItem = new MenuItem("Quit");
+        quitItem.addActionListener(e -> System.exit(0));
+
+        icon.addPopupMenuItem(openItem);
+        icon.addPopupMenuItem(quitItem);
+        icon.addToSystemTray();
+        icon.scheduleThread();
+
+        gui.show();
+
         AudioUtils.displayMixerInfo();
-        new AudioStreamGUI().show();
     }
 
     public static void commandLineMain(String[] args) throws Exception {
