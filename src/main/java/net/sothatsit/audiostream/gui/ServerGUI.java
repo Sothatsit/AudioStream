@@ -1,10 +1,8 @@
 package net.sothatsit.audiostream.gui;
 
 import net.sothatsit.audiostream.AudioStream;
-import net.sothatsit.audiostream.Main;
 import net.sothatsit.audiostream.server.Server;
 import net.sothatsit.audiostream.server.ServerSettings;
-import net.sothatsit.audiostream.util.Exceptions;
 import net.sothatsit.audiostream.util.Exceptions.ValidationException;
 
 import javax.sound.sampled.AudioFormat;
@@ -13,7 +11,6 @@ import javax.swing.*;
 import java.awt.*;
 import java.io.IOException;
 import java.net.Socket;
-import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -42,16 +39,14 @@ public class ServerGUI extends JPanel {
         setPreferredSize(AudioStream.GUI_SIZE);
         setLayout(new GridBagLayout());
 
-        GuiUtils.SeparatorAndLabel separator;
         GBCBuilder constraints = new GBCBuilder()
                 .anchor(GridBagConstraints.WEST)
                 .fill(GridBagConstraints.HORIZONTAL)
-                .insets(5, 5, 5, 5);
+                .insets(5, 5, 5, 5)
+                .weightX(1);
 
         { // Audio
-            separator = GuiUtils.createSeparator("Audio");
-            add(separator.label, constraints.build());
-            add(separator.separator, constraints.weightX(1.0).build(1));
+            add(GuiUtils.createSeparator("Audio"), constraints.build(4));
             constraints.nextRow();
 
             audioOptions = new AudioOptionsGUI(AudioOptionsGUI.AudioType.INPUT);
@@ -61,15 +56,13 @@ public class ServerGUI extends JPanel {
         }
 
         { // Connection
-            separator = GuiUtils.createSeparator("Connection");
-            add(separator.label, constraints.build());
-            add(separator.separator, constraints.weightX(1.0).build());
+            add(GuiUtils.createSeparator("Connection"), constraints.build(4));
             constraints.nextRow();
 
             { // Port
                 portField = GuiUtils.createTextFieldAndLabel("Port", 6789, ServerGUI::isValidPort);
 
-                add(portField.label, constraints.build());
+                add(portField.label, constraints.weightX(0).build());
                 add(portField.field, constraints.padX(50).build());
                 settingInputs.add(portField.field);
                 constraints.nextRow();
@@ -77,7 +70,7 @@ public class ServerGUI extends JPanel {
 
             { // Connection
                 statusLabel = new JLabel();
-                add(new JLabel("Status"), constraints.build());
+                add(new JLabel("Status"), constraints.weightX(0).build());
                 add(statusLabel, constraints.build(3));
                 constraints.nextRow();
 
@@ -110,6 +103,10 @@ public class ServerGUI extends JPanel {
 
         // Start update loop
         new Timer(100, event -> update()).start();
+    }
+
+    public Server getServer() {
+        return server;
     }
 
     public void update() {
@@ -181,8 +178,8 @@ public class ServerGUI extends JPanel {
         if (format == null)
             throw new ValidationException("Please select an Audio Format");
 
-        int bufferSize = Main.DEFAULT_BUFFER_SIZE;
-        double reportIntervalSecs = Main.DEFAULT_REPORT_INTERVAL_SECS;
+        int bufferSize = AudioStream.DEFAULT_BUFFER_SIZE;
+        double reportIntervalSecs = AudioStream.DEFAULT_REPORT_INTERVAL_SECS;
 
         int port;
         try {

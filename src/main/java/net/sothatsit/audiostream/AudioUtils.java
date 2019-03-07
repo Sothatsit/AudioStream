@@ -1,9 +1,10 @@
 package net.sothatsit.audiostream;
 
 import javax.sound.sampled.*;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
+import java.io.*;
+import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
+import java.util.*;
 
 /**
  * Some useful audio functions.
@@ -11,6 +12,25 @@ import java.util.List;
  * @author Paddy Lamont
  */
 public class AudioUtils {
+
+    public static final Map<String, AudioFormat.Encoding> audioFormatEncodings = new HashMap<>();
+    static {
+        Class<AudioFormat.Encoding> formatClass = AudioFormat.Encoding.class;
+        for (Field field : formatClass.getDeclaredFields()) {
+            if (!formatClass.equals(field.getType()) || !Modifier.isStatic(field.getModifiers()))
+                continue;
+
+            AudioFormat.Encoding encoding;
+            try {
+                field.setAccessible(true);
+                encoding = (AudioFormat.Encoding) field.get(null);
+            } catch (IllegalAccessException e) {
+                throw new RuntimeException(e);
+            }
+
+            audioFormatEncodings.put(encoding.toString(), encoding);
+        }
+    }
 
     public static Mixer.Info getMixer(String name) {
         for (Mixer.Info info : AudioSystem.getMixerInfo()) {
@@ -98,7 +118,6 @@ public class AudioUtils {
             }
         }
     }
-
 
     private static void showLineInfo(final Line.Info lineInfo) {
         System.out.println("  " + lineInfo.toString());

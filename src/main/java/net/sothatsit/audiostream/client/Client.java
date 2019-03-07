@@ -1,5 +1,7 @@
 package net.sothatsit.audiostream.client;
 
+import net.sothatsit.audiostream.RemoteAudioServer;
+import net.sothatsit.audiostream.util.LoopedThread;
 import net.sothatsit.audiostream.util.StreamMonitor;
 
 import javax.sound.sampled.*;
@@ -7,127 +9,123 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.ConnectException;
 import java.net.Socket;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * The client receiving the audio.
  *
  * @author Paddy Lamont
  */
-public class Client extends Thread {
+public class Client {
 
     private static final int RECONNECT_MILLIS = 500;
 
+    private final RemoteAudioServer audioServer;
     private final ClientSettings settings;
+    private final LoopedThread thread;
 
-    private boolean running;
     private boolean connected;
     private String status;
-    private Exception threadException;
 
-    public Client(ClientSettings settings) {
-        super("Client");
-
+    public Client(RemoteAudioServer audioServer, ClientSettings settings) {
+        this.audioServer = audioServer;
         this.settings = settings;
+        this.thread = new LoopedThread("Client(" + audioServer + ")", enabled -> {
+            try {
+                runClient(enabled);
+            } catch (IOException | LineUnavailableException | InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+        }, RECONNECT_MILLIS);
 
-        this.running = false;
         this.connected = false;
-        this.status = "";
-        this.threadException = null;
+        this.status = "Disconnected";
     }
 
-    public synchronized boolean isRunning() {
-        return running;
+    public RemoteAudioServer getServer() {
+        return audioServer;
     }
 
-    private synchronized void setRunning(boolean running) {
-        this.running = running;
+    public ClientSettings getSettings() {
+        return settings;
     }
 
-    public synchronized boolean isConnected() {
-        return connected;
-    }
+    public ClientState getState() {
+        LoopedThread.ThreadState threadState = thread.getState();
+        switch (threadState) {
+            case STOPPED:
+                return ClientState.STOPPED;
 
-    private synchronized void setConnected(boolean connected) {
-        this.connected = connected;
+            case RUNNING:
+                if (connected) {
+                    return ClientState.CONNECTED;
+                } else {
+                    return ClientState.CONNECTING;
+                }
+
+            case ERRORED:
+                return ClientState.ERRORED;
+
+            default:
+                throw new IllegalStateException("Unknown ThreadState " + threadState);
+        }
     }
 
     public synchronized String getStatus() {
         return status;
     }
 
-    private synchronized void setStatus(String status) {
+    public Exception getException() {
+        return thread.getException();
+    }
+
+    private synchronized void setStatus(boolean connected, String status) {
+        this.connected = connected;
         this.status = status;
     }
 
-    public synchronized Exception takeThreadException() {
-        Exception exception = threadException;
-        threadException = null;
-        return exception;
+    public void start() {
+        thread.start();
     }
 
-    private synchronized void setThreadException(Exception threadException) {
-        this.threadException = threadException;
+    public void stop() {
+        thread.stopGracefully();
     }
 
-    public synchronized void stopGracefully() throws InterruptedException {
-        if (!isAlive())
-            return;
-
-        running = false;
-        connected = false;
-
-        if (Thread.currentThread() != this) {
-            wait();
-        }
-    }
-
-    @Override
-    public void run() {
-        try {
-            setRunning(true);
-            runClient();
-        } catch (Exception exception) {
-            setThreadException(exception);
-        } finally {
-            setRunning(false);
-            setConnected(false);
-        }
-    }
-
-    public void runClient() throws IOException, LineUnavailableException, InterruptedException {
+    private void runClient(AtomicBoolean enabled) throws IOException, LineUnavailableException, InterruptedException {
         SourceDataLine outLine = settings.getSourceDataLine();
-        outLine.open(settings.format, settings.bufferSize);
-        outLine.start();
+        try {
+            outLine.open(settings.format, settings.bufferSize);
+            outLine.start();
 
-        int frameSize = settings.format.getFrameSize();
+            int frameSize = settings.format.getFrameSize();
 
-        while (isRunning()) {
             Socket socket = null;
             try {
                 // Connect to the socket and play all received audio
-                socket = settings.connectToSocket();
+                socket = audioServer.connectToSocket();
                 InputStream stream = socket.getInputStream();
-                setConnected(true);
+
+                setStatus(true, "Connected");
 
                 byte[] buffer = new byte[settings.bufferSize];
                 int totalBytes = 0;
 
                 StreamMonitor monitor = settings.createStreamMonitor();
-                while (isRunning()) {
+                while (enabled.get()) {
                     int read = stream.read(buffer, totalBytes, buffer.length - totalBytes);
                     if (read < 0)
                         break;
 
                     totalBytes += read;
                     int totalFrames = totalBytes / frameSize;
-
                     if (totalFrames == 0)
                         continue;
 
                     int frameAlignedBytes = totalFrames * frameSize;
 
                     outLine.write(buffer, 0, frameAlignedBytes);
-                    setStatus(monitor.update(buffer, 0, frameAlignedBytes));
+                    setStatus(true, monitor.update(buffer, 0, frameAlignedBytes));
 
                     int leftOver = totalBytes - frameAlignedBytes;
                     if (leftOver > 0) {
@@ -136,11 +134,12 @@ public class Client extends Thread {
                     totalBytes = leftOver;
                 }
             } catch (ConnectException exception) {
-                // If there was an error connecting to the server, sleep and try again
-                System.err.println("Couldn't connect to " + settings.getAddress() + ", retrying...");
-                setConnected(false);
-                Thread.sleep(RECONNECT_MILLIS);
+                System.err.println("Couldn't connect to " + audioServer.getAddressString());
+            } catch (Exception e) {
+                e.printStackTrace();
             } finally {
+                setStatus(false, "Disconnected");
+
                 // Close the socket if it is open
                 if (socket != null && socket.isConnected()) {
                     try {
@@ -149,8 +148,9 @@ public class Client extends Thread {
                         new RuntimeException("Error closing socket", exception).printStackTrace();
                     }
                 }
-                setConnected(false);
             }
+        } finally {
+            outLine.stop();
         }
     }
 }

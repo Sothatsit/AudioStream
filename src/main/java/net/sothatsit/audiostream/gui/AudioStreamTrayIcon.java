@@ -5,6 +5,7 @@ import net.sothatsit.audiostream.AudioStream;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.util.*;
+import java.util.List;
 
 /**
  * A class to handle the system tray icon of AudioStream.
@@ -14,17 +15,24 @@ import java.util.*;
 public class AudioStreamTrayIcon {
 
     private static final Random random = new Random();
-    private static final java.util.List<Double> numbers = new ArrayList<>();
     private static final int NUMS = 30;
     private static final int WIDTH = 128;
     private static final int HEIGHT = 128;
+    private static final int BARS = 3;
 
+    private final AudioStream audioStream;
     private final PopupMenu popupMenu;
     private final TrayIcon trayIcon;
 
-    private Thread thread;
+    private final List<Double> numbers;
 
-    public AudioStreamTrayIcon() {
+    private Thread thread;
+    private boolean running = true;
+
+    public AudioStreamTrayIcon(AudioStream audioStream) {
+        this.audioStream = audioStream;
+        this.numbers = new ArrayList<>();
+
         this.popupMenu = new PopupMenu();
         this.trayIcon = new TrayIcon(generateIcon(), AudioStream.TITLE, popupMenu);
     }
@@ -45,46 +53,76 @@ public class AudioStreamTrayIcon {
         SystemTray.getSystemTray().remove(trayIcon);
     }
 
-    public BufferedImage generateIcon() {
-        numbers.add(random.nextDouble());
-        while (numbers.size() > NUMS) {
-            numbers.remove(0);
+    private void populateNumbersList() {
+        double nextNumber = 0.1;
+        if (audioStream.isClientRunning() || audioStream.isServerRunning()) {
+            nextNumber = random.nextDouble();
         }
+
+        numbers.add(0, nextNumber);
+        while (numbers.size() > NUMS) {
+            numbers.remove(numbers.size() - 1);
+        }
+    }
+
+    private double[] calculateBars() {
+        int barIndexSize = NUMS / BARS;
+
+        double[] bars = new double[BARS];
+        int[] counts = new int[BARS];
+        for (int index = 0; index < numbers.size(); ++index) {
+            int bar = index / barIndexSize;
+            if (bar >= BARS)
+                break;
+
+            bars[bar] += numbers.get(index);
+            counts[bar] += 1;
+        }
+
+        for (int index = 0; index < BARS; ++index) {
+            int count = counts[index];
+            if (count == 0)
+                continue;
+
+            bars[index] /= count;
+        }
+
+        return bars;
+    }
+
+    private BufferedImage generateIcon() {
+        populateNumbersList();
 
         BufferedImage image = new BufferedImage(WIDTH, HEIGHT, BufferedImage.TYPE_INT_ARGB);
-        Graphics2D graphics = (Graphics2D) image.getGraphics();
 
-        double a = 0;
-        double b = 0;
-        double c = 0;
-        for (int i=0; i < numbers.size(); ++i) {
-            if(i < NUMS / 3) {
-                a += numbers.get(i);
-            } else if(i < NUMS * 2 / 3) {
-                b += numbers.get(i);
-            } else {
-                c += numbers.get(i);
-            }
+        Graphics2D graphics = (Graphics2D) image.getGraphics();
+        graphics.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+        double spacing = (double) WIDTH / BARS;
+        double barWidth = 0.8 * spacing;
+        double barHeight = 0.5 * HEIGHT;
+        double padding = (spacing - barWidth) / 2.0;
+
+        double[] bars = calculateBars();
+        for (int index = 0; index < BARS; ++index) {
+            double height = bars[index] * barHeight;
+            double x = (BARS - index - 1) * spacing + padding;
+            double y = HEIGHT - height;
+
+            graphics.setColor(Color.LIGHT_GRAY);
+            graphics.fillRect((int) x, (int) y, (int) barWidth, (int) height);
         }
 
-        a /= NUMS / 3;
-        b /= NUMS / 3;
-        c /= NUMS / 3;
+        float x = 5;
+        float y = 75;
+        graphics.setFont(graphics.getFont().deriveFont(Font.BOLD, 80));
 
-        graphics.setColor(Color.BLACK);
+        graphics.setColor(audioStream.isClientRunning() ? Color.BLACK : Color.GRAY);
+        graphics.drawString("A", x, y);
+        x += 64;
 
-        int spacing = WIDTH / 3;
-        int barWidth = WIDTH / 4;
-        int padding = (spacing - barWidth) / 2;
-
-        int aHeight = (int) (HEIGHT * a);
-        graphics.fillRect(padding, HEIGHT - aHeight, barWidth, aHeight);
-
-        int bHeight = (int) (HEIGHT * b);
-        graphics.fillRect(spacing + padding, HEIGHT - bHeight, barWidth, bHeight);
-
-        int cHeight = (int) (HEIGHT * c);
-        graphics.fillRect(2 * spacing + padding, HEIGHT - cHeight, barWidth, cHeight);
+        graphics.setColor(audioStream.isServerRunning() ? Color.BLACK : Color.GRAY);
+        graphics.drawString("S",  x, y);
 
         return image;
     }
@@ -93,21 +131,24 @@ public class AudioStreamTrayIcon {
         trayIcon.setImage(generateIcon());
     }
 
+    public void runUpdateLoop() {
+        while (running) {
+            update();
+
+            try {
+                Thread.sleep(100);
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+        }
+    }
+
     public void scheduleThread() {
         if (thread != null && thread.isAlive())
-            throw new RuntimeException("Thread already scheduled");
+            throw new IllegalStateException("Thread already scheduled");
 
-        thread = new Thread(() -> {
-            while(true) {
-                update();
-
-                try {
-                    Thread.sleep(100);
-                } catch (InterruptedException e) {
-                    throw new RuntimeException(e);
-                }
-            }
-        });
+        running = true;
+        thread = new Thread(this::runUpdateLoop);
         thread.setDaemon(true);
         thread.start();
     }
@@ -116,6 +157,7 @@ public class AudioStreamTrayIcon {
         if (thread == null || !thread.isAlive())
             return;
 
+        running = false;
         thread.stop();
         thread = null;
     }

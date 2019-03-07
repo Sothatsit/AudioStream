@@ -36,6 +36,10 @@ public class Server extends Thread {
         this.serverSocket = null;
     }
 
+    public ServerSettings getSettings() {
+        return settings;
+    }
+
     public synchronized boolean isRunning() {
         return running;
     }

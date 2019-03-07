@@ -1,16 +1,20 @@
 package net.sothatsit.audiostream.gui;
 
 import net.sothatsit.audiostream.AudioStream;
-import net.sothatsit.audiostream.Main;
+import net.sothatsit.audiostream.RemoteAudioServer;
+import net.sothatsit.audiostream.RemoteAudioServerIndex;
 import net.sothatsit.audiostream.client.Client;
+import net.sothatsit.audiostream.client.ClientManager;
 import net.sothatsit.audiostream.client.ClientSettings;
 import net.sothatsit.audiostream.util.Exceptions.ValidationException;
 
 import javax.sound.sampled.*;
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.ActionEvent;
 import java.net.*;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -20,168 +24,228 @@ import java.util.List;
  */
 public class ClientGUI extends JPanel {
 
-    private final List<JComponent> settingComponents;
+    private final RemoteAudioServerIndex remoteServerIndex;
 
     private final AudioOptionsGUI audioOptions;
-    private final GuiUtils.TextFieldAndLabel addressField;
-    private final GuiUtils.TextFieldAndLabel portField;
-    private final JLabel statusLabel;
-    private final JButton connectButton;
-    private final JButton disconnectButton;
+    private final JList<RemoteAudioServer> availableServersList;
+    private final JList<Client> connectedServersList;
+    private final BasicListModel<RemoteAudioServer> availableServers;
+    private final BasicListModel<Client> connectedServers;
 
-    private Client client;
+    private ClientManager clientManager;
 
-    public ClientGUI() {
-        this.settingComponents = new ArrayList<>();
-        this.client = null;
+    public ClientGUI(RemoteAudioServerIndex remoteServerIndex) {
+        this.remoteServerIndex = remoteServerIndex;
+        this.clientManager = null;
 
         setPreferredSize(AudioStream.GUI_SIZE);
         setLayout(new GridBagLayout());
 
-        GuiUtils.SeparatorAndLabel separator;
         GBCBuilder constraints = new GBCBuilder()
                 .anchor(GridBagConstraints.WEST)
-                .fill(GridBagConstraints.HORIZONTAL)
-                .insets(5, 5, 5, 5);
+                .fill(GridBagConstraints.BOTH)
+                .insets(5, 5, 5, 5)
+                .weightX(1);
 
         { // Audio
-            separator = GuiUtils.createSeparator("Audio");
-            add(separator.label, constraints.build());
-            add(separator.separator, constraints.build(3));
+            add(GuiUtils.createSeparator("Audio"), constraints.build(4));
             constraints.nextRow();
 
-            audioOptions = new AudioOptionsGUI(AudioOptionsGUI.AudioType.OUTPUT);
+            audioOptions = new AudioOptionsGUI(AudioOptionsGUI.AudioType.OUTPUT, false);
             add(audioOptions, constraints.build(4));
-            settingComponents.add(audioOptions);
             constraints.nextRow();
         }
 
         { // Connection
-            separator = GuiUtils.createSeparator("Connection");
-            add(separator.label, constraints.build());
-            add(separator.separator, constraints.build(3));
+            add(GuiUtils.createSeparator("Connection"), constraints.build(4));
             constraints.nextRow();
 
-            { // Address and port
+            { // Server Lists
+                JPanel panel = new JPanel();
+                panel.setLayout(new GridBagLayout());
 
-                addressField = GuiUtils.createTextFieldAndLabel("Address", "localhost", ClientGUI::isValidAddress);
-                portField = GuiUtils.createTextFieldAndLabel("Port", 6789, ClientGUI::isValidPort);
+                GBCBuilder parentConstraints = constraints;
+                constraints = new GBCBuilder()
+                        .anchor(GridBagConstraints.WEST)
+                        .fill(GridBagConstraints.BOTH)
+                        .insets(5, 5, 5, 5);
 
-                add(addressField.label, constraints.build());
-                add(addressField.field, constraints.weightX(1.0).build());
-                settingComponents.add(addressField.field);
-                add(portField.label, constraints.build());
-                add(portField.field, constraints.padX(50).build());
-                settingComponents.add(portField.field);
+                availableServers = new BasicListModel<>();
+                availableServersList = new JList<>();
+                availableServersList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+                availableServersList.setVisibleRowCount(8);
+                availableServersList.setCellRenderer(new RemoteAudioServerListRenderer());
+                availableServersList.setModel(availableServers);
+
+                connectedServers = new BasicListModel<>();
+                connectedServersList = new JList<>();
+                connectedServersList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+                connectedServersList.setVisibleRowCount(8);
+                connectedServersList.setCellRenderer(new ClientListRenderer());
+                connectedServersList.setModel(connectedServers);
+
+                Action connectAction = new AbstractAction("Connect") {
+                    @Override
+                    public void actionPerformed(ActionEvent e) {
+                        connect();
+                    }
+                };
+                Action addAction = new AbstractAction("Add New") {
+                    @Override
+                    public void actionPerformed(ActionEvent e) {
+                        addServer();
+                    }
+                };
+
+                Action disconnectAction = new AbstractAction("Disconnect") {
+                    @Override
+                    public void actionPerformed(ActionEvent e) {
+                        disconnect();
+                    }
+                };
+                Action viewAction = new AbstractAction("View Details") {
+                    @Override
+                    public void actionPerformed(ActionEvent e) {
+                        viewClient();
+                    }
+                };
+
+                Runnable updateServerButtonStates = () -> {
+                    boolean availableSelected = !availableServersList.isSelectionEmpty();
+                    boolean connectedSelected = !connectedServersList.isSelectionEmpty();
+
+                    connectAction.setEnabled(availableSelected);
+                    disconnectAction.setEnabled(connectedSelected);
+                    viewAction.setEnabled(connectedSelected);
+                };
+                updateServerButtonStates.run();
+
+                // Only allow a selection in one of the two server lists
+                availableServersList.addListSelectionListener(e -> {
+                    if (e.getValueIsAdjusting()) {
+                        connectedServersList.clearSelection();
+                    }
+                    updateServerButtonStates.run();
+                });
+                connectedServersList.addListSelectionListener(e -> {
+                    if (e.getValueIsAdjusting()) {
+                        availableServersList.clearSelection();
+                    }
+                    updateServerButtonStates.run();
+                });
+
+                JScrollPane availableScrollPane = new JScrollPane(
+                        availableServersList,
+                        JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED,
+                        JScrollPane.HORIZONTAL_SCROLLBAR_NEVER
+                );
+                JScrollPane connectedScrollPane = new JScrollPane(
+                        connectedServersList,
+                        JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED,
+                        JScrollPane.HORIZONTAL_SCROLLBAR_NEVER
+                );
+                availableScrollPane.setMinimumSize(new Dimension(30, 150));
+                connectedScrollPane.setMinimumSize(new Dimension(30, 150));
+
+                JLabel availableServersLabel = new JLabel("Available Servers", SwingConstants.CENTER);
+                JLabel connectedServersLabel = new JLabel("Connected Servers", SwingConstants.CENTER);
+                availableServersLabel.setFont(availableServersLabel.getFont().deriveFont(Font.BOLD));
+                connectedServersLabel.setFont(connectedServersLabel.getFont().deriveFont(Font.BOLD));
+                availableServersLabel.setAlignmentX(0.5f);
+                connectedServersLabel.setAlignmentX(0.5f);
+
+                panel.add(GuiUtils.buildVerticalPanel(
+                        new JComponent[]{
+                                availableServersLabel,
+                                availableScrollPane,
+                                GuiUtils.buildCenteredPanel(connectAction, addAction)
+                        },
+                        new float[]{
+                                0.0f,
+                                1.0f,
+                                0.0f
+                        }
+                ), constraints.weight(1.0, 1.0).build());
+
+                panel.add(new JLabel("->"), constraints.weight(0, 0).build());
+
+                panel.add(GuiUtils.buildVerticalPanel(
+                        new JComponent[]{
+                                connectedServersLabel,
+                                connectedScrollPane,
+                                GuiUtils.buildCenteredPanel(disconnectAction, viewAction)
+                        },
+                        new float[]{
+                                0.0f,
+                                1.0f,
+                                0.0f
+                        }
+                ), constraints.weight(1.0, 1.0).build());
+                constraints.nextRow();
+
+                // Restore parent constraints
+                constraints = parentConstraints;
+                add(panel, constraints.weight(1.0, 1.0).build(4));
                 constraints.nextRow();
             }
-
-            { // Connection
-                statusLabel = new JLabel();
-                add(new JLabel("Status"), constraints.build());
-                add(statusLabel, constraints.build(3));
-                constraints.nextRow();
-
-                connectButton = new JButton();
-                disconnectButton = new JButton();
-
-                connectButton.setPreferredSize(new Dimension(150, 30));
-                disconnectButton.setPreferredSize(new Dimension(150, 30));
-
-                connectButton.addActionListener(event -> {
-                    connectButton.setEnabled(false);
-                    connectButton.setText("Connecting...");
-                    connect();
-                });
-                disconnectButton.addActionListener(event -> {
-                    disconnectButton.setEnabled(false);
-                    disconnectButton.setText("Disconnecting...");
-                    disconnect();
-                });
-
-                add(GuiUtils.buildCenteredPanel(connectButton, disconnectButton), constraints.build(4));
-                constraints.nextRow();
-            }
-        }
-
-        { // Empty space
-            add(new JPanel(), constraints.weightY(1.0).build());
-            constraints.nextRow();
         }
 
         // Start update loop
         new Timer(100, event -> update()).start();
     }
 
-    public void update() {
-        if (client != null && !client.isAlive()) {
-            Exception exception = client.takeThreadException();
-            if (exception != null) {
-                GuiUtils.reportError(exception);
-            }
+    public List<Client> getClients() {
+        return clientManager.getClients();
+    }
 
-            client = null;
-        }
-
-        if (client == null) {
-            GuiUtils.enableAll(settingComponents);
-
-            statusLabel.setText("Disconnected");
-            statusLabel.setForeground(Color.GRAY);
-
-            connectButton.setText("Connect");
-            connectButton.setEnabled(true);
-
-            disconnectButton.setText("Disconnected");
-            disconnectButton.setEnabled(false);
+    private void connect() {
+        RemoteAudioServer server = availableServersList.getSelectedValue();
+        if (server == null)
             return;
-        }
 
-        GuiUtils.disableAll(settingComponents);
-
-        disconnectButton.setText("Disconnect");
-        disconnectButton.setEnabled(true);
-
-        connectButton.setEnabled(false);
-        statusLabel.setForeground(Color.DARK_GRAY);
-        if (client.isConnected()) {
-            String clientStatus = client.getStatus();
-
-            if (clientStatus.isEmpty()) {
-                statusLabel.setText("Connected");
-            } else {
-                statusLabel.setText("Connected: " + clientStatus);
-            }
-
-            connectButton.setText("Connected");
-        } else {
-            statusLabel.setText("Connecting...");
-            connectButton.setText("Connecting...");
-        }
+        clientManager.connect(server);
     }
 
-    public void connect() {
-        if (client != null)
-            throw new ValidationException("Already connected");
-
-        client = new Client(createSettings());
-        client.start();
+    private void addServer() {
+        System.err.println("addServer");
     }
 
-    public void disconnect() {
+    private void disconnect() {
+        Client client = connectedServersList.getSelectedValue();
         if (client == null)
-            throw new ValidationException("Already disconnected");
+            return;
 
-        while (true) {
-            try {
-                client.stopGracefully();
-                break;
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
+        clientManager.disconnect(client);
+    }
+
+    private void viewClient() {
+        System.err.println("viewClient");
+    }
+
+    private void updateClientManager() {
+        ClientSettings settings = createSettings();
+        if (clientManager != null && settings.equals(clientManager.getSettings()))
+            return;
+
+        List<RemoteAudioServer> reconnectServers = Collections.emptyList();
+        if (clientManager != null) {
+            reconnectServers = clientManager.getServers();
+            clientManager.disconnectAll();
+            clientManager = null;
         }
 
-        client = null;
+        clientManager = new ClientManager(settings);
+        clientManager.connectAll(reconnectServers);
+    }
+
+    public void update() {
+        updateClientManager();
+
+        List<RemoteAudioServer> disconnectedServers = new ArrayList<>(remoteServerIndex.getServers());
+        disconnectedServers.removeAll(clientManager.getServers());
+
+        availableServers.replaceAll(disconnectedServers);
+        connectedServers.replaceAll(clientManager.getClients());
     }
 
     public ClientSettings createSettings() throws ValidationException {
@@ -192,18 +256,10 @@ public class ClientGUI extends JPanel {
         if (format == null)
             throw new ValidationException("Please select an Audio Format");
 
-        int bufferSize = Main.DEFAULT_BUFFER_SIZE;
-        double reportIntervalSecs = Main.DEFAULT_REPORT_INTERVAL_SECS;
-        String address = this.addressField.getText();
+        int bufferSize = AudioStream.DEFAULT_BUFFER_SIZE;
+        double reportIntervalSecs = AudioStream.DEFAULT_REPORT_INTERVAL_SECS;
 
-        int port;
-        try {
-            port = Integer.parseInt(portField.getText());
-        } catch (NumberFormatException e) {
-            throw new ValidationException("Invalid port " + portField.getText());
-        }
-
-        return new ClientSettings(format, mixer, bufferSize, reportIntervalSecs, address, port);
+        return new ClientSettings(format, mixer, bufferSize, reportIntervalSecs);
     }
 
     public static boolean isValidAddress(String address) {

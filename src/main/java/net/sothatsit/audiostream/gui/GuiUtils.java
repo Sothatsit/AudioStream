@@ -192,25 +192,25 @@ public class GuiUtils {
         }
     }
 
-    public static class SeparatorAndLabel {
+    public static JPanel createSeparator(String labelText) {
+        JPanel panel = new JPanel();
 
-        public final JLabel label;
-        public final JSeparator separator;
+        panel.setLayout(new GridBagLayout());
+        GBCBuilder builder = new GBCBuilder()
+                .anchor(GridBagConstraints.WEST)
+                .fill(GridBagConstraints.HORIZONTAL)
+                .insets(5, 5, 0, 0);
 
-        public SeparatorAndLabel(JLabel label, JSeparator separator) {
-            this.label = label;
-            this.separator = separator;
-        }
-    }
-
-    public static SeparatorAndLabel createSeparator(String labelText) {
         JLabel label = new JLabel(labelText);
         JSeparator separator = new JSeparator();
 
         label.setFont(label.getFont().deriveFont(Font.BOLD));
         separator.setForeground(Color.GRAY);
 
-        return new SeparatorAndLabel(label, separator);
+        panel.add(label, builder.weightX(0.0).build());
+        panel.add(separator, builder.weightX(1.0).build());
+
+        return panel;
     }
 
     public static class TextFieldAndLabel {
@@ -283,10 +283,44 @@ public class GuiUtils {
 
     public static JComponent buildCenteredPanel(JComponent... components) {
         JPanel panel = new JPanel();
-        panel.setLayout(new FlowLayout());
+        panel.setLayout(new GridBagLayout());
+
+        GBCBuilder builder = new GBCBuilder()
+                .anchor(GridBagConstraints.CENTER)
+                .fill(GridBagConstraints.BOTH)
+                .insets(0, 0, 0, 0);
 
         for (JComponent component : components) {
-            panel.add(component);
+            panel.add(component, builder.weight(1.0, 1.0).build());
+        }
+
+        return panel;
+    }
+
+    public static JComponent buildVerticalPanel(JComponent... components) {
+        return buildVerticalPanel(components, null);
+    }
+
+    public static JComponent buildVerticalPanel(JComponent[] components, float[] verticalWeights) {
+        if (components == null)
+            throw new IllegalArgumentException("components cannot be null");
+        if (verticalWeights != null && components.length != verticalWeights.length)
+            throw new IllegalArgumentException("components and verticalWeights must have the same length");
+
+        JPanel panel = new JPanel();
+        panel.setLayout(new GridBagLayout());
+
+        GBCBuilder constraints = new GBCBuilder()
+                .anchor(GridBagConstraints.CENTER)
+                .fill(GridBagConstraints.BOTH)
+                .insets(0, 0, 0, 0);
+
+        for (int index = 0; index < components.length; ++index) {
+            JComponent component = components[index];
+            float weightY = (verticalWeights != null ? verticalWeights[index] : 0);
+
+            panel.add(component, constraints.weight(1.0, weightY).build());
+            constraints.nextRow();
         }
 
         return panel;

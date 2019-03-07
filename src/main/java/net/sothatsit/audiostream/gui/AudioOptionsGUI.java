@@ -30,6 +30,10 @@ public class AudioOptionsGUI extends JPanel {
     private final GuiUtils.WrappedComboBox<Integer> channelsCombo;
 
     public AudioOptionsGUI(AudioType audioType) {
+        this(audioType, true);
+    }
+
+    public AudioOptionsGUI(AudioType audioType, boolean showFormatSelectors) {
         this.audioType = audioType;
         this.settingComponents = new ArrayList<>();
 
@@ -110,24 +114,26 @@ public class AudioOptionsGUI extends JPanel {
             ));
 
             audioFormatLabel = new JLabel("Audio Format");
-            add(audioFormatLabel, constraints.build());
-            add("Encoding", Color.DARK_GRAY, constraints.build());
-            add(encodingCombo, constraints.weightX(1.0).build());
-            add("Endian", Color.DARK_GRAY, constraints.build());
-            add(bigEndianCombo, constraints.weightX(1.0).build());
-            constraints.nextRow();
+            if (showFormatSelectors) {
+                add(audioFormatLabel, constraints.build());
+                add("Encoding", Color.DARK_GRAY, constraints.build());
+                add(encodingCombo, constraints.weightX(1.0).build());
+                add("Endian", Color.DARK_GRAY, constraints.build());
+                add(bigEndianCombo, constraints.weightX(1.0).build());
+                constraints.nextRow();
 
-            constraints.nextColumn();
-            add("Sample Rate", Color.DARK_GRAY, constraints.build());
-            add(sampleRateCombo, constraints.weightX(1.0).build());
-            add("Sample Size", Color.DARK_GRAY, constraints.build());
-            add(sampleSizeCombo, constraints.weightX(1.0).build());
-            constraints.nextRow();
+                constraints.nextColumn();
+                add("Sample Rate", Color.DARK_GRAY, constraints.build());
+                add(sampleRateCombo, constraints.weightX(1.0).build());
+                add("Sample Size", Color.DARK_GRAY, constraints.build());
+                add(sampleSizeCombo, constraints.weightX(1.0).build());
+                constraints.nextRow();
 
-            constraints.nextColumn();
-            add("Channels", Color.DARK_GRAY, constraints.build());
-            add(channelsCombo, constraints.weightX(1.0).build());
-            constraints.nextRow();
+                constraints.nextColumn();
+                add("Channels", Color.DARK_GRAY, constraints.build());
+                add(channelsCombo, constraints.weightX(1.0).build());
+                constraints.nextRow();
+            }
         }
 
         // Start update loop
