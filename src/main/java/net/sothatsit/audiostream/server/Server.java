@@ -161,8 +161,6 @@ public class Server extends Thread {
             inBuffer = new VariableBuffer(settings.bufferSize);
             reader.addOutBuffer(inBuffer);
 
-            System.out.println("Writing audio to " + socket + "...");
-
             byte[] buffer = new byte[settings.bufferSize];
             while (isRunning()) {
                 inBuffer.pop(buffer, 0, buffer.length);

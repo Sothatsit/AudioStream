@@ -32,6 +32,30 @@ public class AudioUtils {
         }
     }
 
+    public static String getAudioFormatEncodingHumanString(AudioFormat.Encoding encoding) {
+        if (encoding == AudioFormat.Encoding.PCM_SIGNED)
+            return "Signed";
+        if (encoding == AudioFormat.Encoding.PCM_UNSIGNED)
+            return "Unsigned";
+        if (encoding == AudioFormat.Encoding.PCM_FLOAT)
+            return "Floating Point";
+        if (encoding == AudioFormat.Encoding.ULAW)
+            return "U-Law";
+        if (encoding == AudioFormat.Encoding.ALAW)
+            return "A-Law";
+        return encoding.toString();
+    }
+
+    public static String getAudioFormatChannelsHumanString(int channels) {
+        if (channels == 1)
+            return "Mono";
+        if (channels == 2)
+            return "Stereo";
+        if (channels == AudioSystem.NOT_SPECIFIED)
+            return "Unknown Channel";
+        return channels + " Channel";
+    }
+
     public static Mixer.Info getMixer(String name) {
         for (Mixer.Info info : AudioSystem.getMixerInfo()) {
             if (info.getName().equals(name))

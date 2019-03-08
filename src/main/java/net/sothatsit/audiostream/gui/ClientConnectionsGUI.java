@@ -10,11 +10,11 @@ import net.sothatsit.audiostream.util.Exceptions.ValidationException;
 
 import javax.sound.sampled.*;
 import javax.swing.*;
+import javax.swing.Timer;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.net.*;
-import java.util.ArrayList;
-import java.util.Collections;
+import java.util.*;
 import java.util.List;
 
 /**
@@ -22,8 +22,9 @@ import java.util.List;
  *
  * @author Paddy Lamont
  */
-public class ClientGUI extends JPanel {
+public class ClientConnectionsGUI extends JPanel {
 
+    private final JFrame parentFrame;
     private final RemoteAudioServerIndex remoteServerIndex;
 
     private final AudioOptionsGUI audioOptions;
@@ -32,11 +33,15 @@ public class ClientGUI extends JPanel {
     private final BasicListModel<RemoteAudioServer> availableServers;
     private final BasicListModel<Client> connectedServers;
 
+    private final Map<Client, ClientViewGUI> clientViewWindows;
+
     private ClientManager clientManager;
 
-    public ClientGUI(RemoteAudioServerIndex remoteServerIndex) {
+    public ClientConnectionsGUI(JFrame parentFrame, RemoteAudioServerIndex remoteServerIndex) {
+        this.parentFrame = parentFrame;
         this.remoteServerIndex = remoteServerIndex;
         this.clientManager = null;
+        this.clientViewWindows = new HashMap<>();
 
         setPreferredSize(AudioStream.GUI_SIZE);
         setLayout(new GridBagLayout());
@@ -219,7 +224,20 @@ public class ClientGUI extends JPanel {
     }
 
     private void viewClient() {
-        System.err.println("viewClient");
+        Client client = connectedServersList.getSelectedValue();
+        if (client == null)
+            return;
+
+        ClientViewGUI view = clientViewWindows.get(client);
+        if (view != null) {
+            view.show();
+            return;
+        }
+
+        view = new ClientViewGUI(parentFrame, client);
+        view.show();
+
+        clientViewWindows.put(client, view);
     }
 
     private void updateClientManager() {
@@ -238,8 +256,22 @@ public class ClientGUI extends JPanel {
         clientManager.connectAll(reconnectServers);
     }
 
+    private void updateClientViewWindows() {
+        Set<Client> invalidClients = new HashSet<>(clientViewWindows.keySet());
+        invalidClients.removeAll(clientManager.getClients());
+
+        for (Client client : invalidClients) {
+            ClientViewGUI view = clientViewWindows.remove(client);
+
+            view.dispose();
+        }
+
+        clientViewWindows.values().forEach(ClientViewGUI::update);
+    }
+
     public void update() {
         updateClientManager();
+        updateClientViewWindows();
 
         List<RemoteAudioServer> disconnectedServers = new ArrayList<>(remoteServerIndex.getServers());
         disconnectedServers.removeAll(clientManager.getServers());

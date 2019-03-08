@@ -25,6 +25,7 @@ public class Client {
     private final LoopedThread thread;
 
     private boolean connected;
+    private Exception connectionException;
     private String status;
 
     public Client(RemoteAudioServer audioServer, ClientSettings settings) {
@@ -59,6 +60,8 @@ public class Client {
             case RUNNING:
                 if (connected) {
                     return ClientState.CONNECTED;
+                } else if (connectionException != null) {
+                    return ClientState.ERRORED;
                 } else {
                     return ClientState.CONNECTING;
                 }
@@ -76,12 +79,20 @@ public class Client {
     }
 
     public Exception getException() {
+        if (connectionException != null)
+            return connectionException;
+
         return thread.getException();
     }
 
     private synchronized void setStatus(boolean connected, String status) {
+        setStatus(connected, status, (connected ? null : connectionException));
+    }
+
+    private synchronized void setStatus(boolean connected, String status, Exception connectionException) {
         this.connected = connected;
         this.status = status;
+        this.connectionException = connectionException;
     }
 
     public void start() {
@@ -101,6 +112,8 @@ public class Client {
             int frameSize = settings.format.getFrameSize();
 
             Socket socket = null;
+            String exitStatus = "Disconnected";
+            Exception connectionException = null;
             try {
                 // Connect to the socket and play all received audio
                 socket = audioServer.connectToSocket();
@@ -133,19 +146,22 @@ public class Client {
                     }
                     totalBytes = leftOver;
                 }
-            } catch (ConnectException exception) {
-                System.err.println("Couldn't connect to " + audioServer.getAddressString());
-            } catch (Exception e) {
-                e.printStackTrace();
+            } catch (ConnectException e) {
+                connectionException = e;
+                exitStatus = "Unable to connect: " + e.getMessage();
+            } catch (RuntimeException e) {
+                connectionException = e;
+                exitStatus = "There was an error: " + e.getMessage();
+                throw e;
             } finally {
-                setStatus(false, "Disconnected");
+                setStatus(false, exitStatus, connectionException);
 
                 // Close the socket if it is open
                 if (socket != null && socket.isConnected()) {
                     try {
                         socket.close();
-                    } catch (IOException exception) {
-                        new RuntimeException("Error closing socket", exception).printStackTrace();
+                    } catch (IOException e) {
+                        new RuntimeException("Error closing socket", e).printStackTrace();
                     }
                 }
             }

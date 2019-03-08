@@ -56,6 +56,20 @@ public class RemoteAudioServer {
         return this.address.equals(address) && this.port == port;
     }
 
+    @Override
+    public boolean equals(Object obj) {
+        if (obj == null || !getClass().equals(obj.getClass()))
+            return false;
+
+        RemoteAudioServer other = (RemoteAudioServer) obj;
+        return is(other.address, other.port);
+    }
+
+    @Override
+    public int hashCode() {
+        return address.hashCode() ^ Integer.hashCode(port);
+    }
+
     public void addAudioFormatListener(Consumer<RemoteAudioServer> listener) {
         audioFormatListeners.add(listener);
     }

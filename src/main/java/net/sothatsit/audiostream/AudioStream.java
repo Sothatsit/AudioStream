@@ -62,10 +62,10 @@ public class AudioStream {
         this.gui = new AudioStreamGUI(serverIndex);
         this.trayIcon = new AudioStreamTrayIcon(this);
 
-        MenuItem openItem = new MenuItem("Open GUI");
+        MenuItem openItem = new MenuItem("Open Window");
         openItem.addActionListener(e -> gui.show());
 
-        MenuItem quitItem = new MenuItem("Quit");
+        MenuItem quitItem = new MenuItem("Quit AudioStream");
         quitItem.addActionListener(e -> System.exit(0));
 
         trayIcon.addPopupMenuItem(openItem);

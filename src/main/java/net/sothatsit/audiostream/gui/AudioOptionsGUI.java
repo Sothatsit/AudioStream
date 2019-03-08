@@ -72,19 +72,7 @@ public class AudioOptionsGUI extends JPanel {
                             AudioFormat.Encoding.PCM_UNSIGNED
                     },
                     AudioFormat.Encoding.PCM_SIGNED,
-                    encoding -> {
-                        if (encoding == AudioFormat.Encoding.PCM_SIGNED)
-                            return "PCM Signed";
-                        if (encoding == AudioFormat.Encoding.PCM_UNSIGNED)
-                            return "PCM Unsigned";
-                        if (encoding == AudioFormat.Encoding.PCM_FLOAT)
-                            return "PCM Floating Point";
-                        if (encoding == AudioFormat.Encoding.ULAW)
-                            return "U-Law";
-                        if (encoding == AudioFormat.Encoding.ALAW)
-                            return "A-Law";
-                        return encoding.toString();
-                    }
+                    AudioUtils::getAudioFormatEncodingHumanString
             );
 
             bigEndianCombo = GuiUtils.createComboBox(

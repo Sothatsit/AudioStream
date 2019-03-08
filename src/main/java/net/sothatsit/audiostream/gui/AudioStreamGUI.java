@@ -20,7 +20,7 @@ import java.util.List;
 public class AudioStreamGUI {
 
     private final JFrame frame;
-    private final ClientGUI clientGUI;
+    private final ClientConnectionsGUI clientGUI;
     private final ServerGUI serverGUI;
 
     public AudioStreamGUI(RemoteAudioServerIndex remoteServerIndex) {
@@ -36,7 +36,7 @@ public class AudioStreamGUI {
             }
         });
 
-        this.clientGUI = new ClientGUI(remoteServerIndex);
+        this.clientGUI = new ClientConnectionsGUI(frame, remoteServerIndex);
         this.serverGUI = new ServerGUI();
 
         JTabbedPane pane = new JTabbedPane();
