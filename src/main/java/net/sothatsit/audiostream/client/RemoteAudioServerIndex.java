@@ -1,11 +1,12 @@
-package net.sothatsit.audiostream;
+package net.sothatsit.audiostream.client;
 
+import net.sothatsit.audiostream.AudioStream;
 import net.sothatsit.audiostream.packet.PacketBuilder;
 import net.sothatsit.audiostream.packet.PacketReader;
 import net.sothatsit.audiostream.packet.PacketType;
 import net.sothatsit.audiostream.server.ServerSettings;
 import net.sothatsit.audiostream.util.LoopedThread;
-import net.sothatsit.audiostream.util.Multicast;
+import net.sothatsit.audiostream.packet.Multicast;
 
 import javax.sound.sampled.AudioFormat;
 import java.io.IOException;
@@ -79,7 +80,34 @@ public class RemoteAudioServerIndex {
         updateThread.stopGracefully();
     }
 
+    public synchronized RemoteAudioServer getServer(InetAddress address, int port) {
+        for (RemoteAudioServer server : foundServers) {
+            if (server.is(address, port))
+                return server;
+        }
+
+        for (RemoteAudioServer server : manualServers) {
+            if (server.is(address, port))
+                return server;
+        }
+
+        return null;
+    }
+
+    public synchronized boolean containsServer(InetAddress address, int port) {
+        return getServer(address, port) != null;
+    }
+
+    public synchronized boolean isManuallyAddedServer(RemoteAudioServer server) {
+        return manualServers.contains(server);
+    }
+
     public synchronized RemoteAudioServer addManualServer(InetAddress address, int port) throws IOException {
+        for (RemoteAudioServer server : manualServers) {
+            if (server.is(address, port))
+                return server;
+        }
+
         RemoteAudioServer server = null;
         Iterator<RemoteAudioServer> servers = foundServers.iterator();
         while (servers.hasNext()) {
@@ -101,7 +129,7 @@ public class RemoteAudioServerIndex {
         return server;
     }
 
-    public synchronized void removeManualServer(RemoteAudioServer server) throws IOException {
+    public synchronized void removeManualServer(RemoteAudioServer server) {
         manualServers.remove(server);
     }
 
@@ -113,15 +141,9 @@ public class RemoteAudioServerIndex {
     }
 
     private synchronized RemoteAudioServer findOrCreateServer(InetAddress address, int port) {
-        for (RemoteAudioServer server : manualServers) {
-            if (server.is(address, port))
-                return server;
-        }
-
-        for (RemoteAudioServer server : foundServers) {
-            if (server.is(address, port))
-                return server;
-        }
+        RemoteAudioServer existing = getServer(address, port);
+        if (existing != null)
+            return existing;
 
         RemoteAudioServer server = new RemoteAudioServer(address, port);
         foundServers.add(server);

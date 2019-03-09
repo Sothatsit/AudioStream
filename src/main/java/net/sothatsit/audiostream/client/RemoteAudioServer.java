@@ -1,9 +1,11 @@
-package net.sothatsit.audiostream;
+package net.sothatsit.audiostream.client;
 
 import javax.sound.sampled.AudioFormat;
 import java.io.IOException;
 import java.net.InetAddress;
+import java.net.NetworkInterface;
 import java.net.Socket;
+import java.net.SocketException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
@@ -45,7 +47,17 @@ public class RemoteAudioServer {
     }
 
     public String getAddressString() {
-        return address + ":" + port;
+        String addressString;
+        if (isAddressLocalhost(address)) {
+            addressString = "localhost";
+        } else {
+            addressString = address.getHostName();
+            if (addressString == null) {
+                addressString = address.getHostAddress();
+            }
+        }
+
+        return addressString + ":" + port;
     }
 
     public long getTimeSinceCommunicationMS() {
@@ -53,7 +65,11 @@ public class RemoteAudioServer {
     }
 
     public boolean is(InetAddress address, int port) {
-        return this.address.equals(address) && this.port == port;
+        if (this.port != port)
+            return false;
+        if (this.address.equals(address))
+            return true;
+        return isAddressLocalhost(this.address) && isAddressLocalhost(address);
     }
 
     @Override
@@ -97,5 +113,16 @@ public class RemoteAudioServer {
     @Override
     public String toString() {
         return "RemoteAudioServer(" + address + ":" + port + ")";
+    }
+
+    public static boolean isAddressLocalhost(InetAddress addr) {
+        if (addr.isAnyLocalAddress() || addr.isLoopbackAddress())
+            return true;
+
+        try {
+            return NetworkInterface.getByInetAddress(addr) != null;
+        } catch (SocketException e) {
+            return false;
+        }
     }
 }

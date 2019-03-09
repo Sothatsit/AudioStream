@@ -156,13 +156,13 @@ public class LoopedThread {
             thread.interrupt();
             thread.join(forcefulTimeout);
         } catch (InterruptedException e) {
-            throw new RuntimeException("Interrupted waiting for thread to finish", e);
+            throw new RuntimeException("Interrupted waiting for LoopedThread " + name + "to finish", e);
         } finally {
             if (thread.isAlive()) {
                 if (forcefulTimeout > 0 && System.currentTimeMillis() - start >= forcefulTimeout) {
-                    System.err.println("Terminating thread " + this + " as forceful timeout was exceeded");
+                    System.err.println("Terminating LoopedThread " + name + " as forceful timeout was exceeded");
                 } else {
-                    System.err.println("Terminating thread " + this + " due to exception");
+                    System.err.println("Terminating LoopedThread " + name + " due to exception");
                 }
 
                 thread.stop();
@@ -177,7 +177,7 @@ public class LoopedThread {
             try {
                 task.accept(enabled);
             } catch (Exception e) {
-                new RuntimeException("Exception in LoopedThread" + name, e).printStackTrace();
+                new RuntimeException("Exception in LoopedThread " + name, e).printStackTrace();
                 exception = e;
                 break;
             }
@@ -190,7 +190,7 @@ public class LoopedThread {
             try {
                 Thread.sleep(delay);
             } catch (InterruptedException e) {
-                System.err.println(name + " interrupted");
+                System.err.println("Interrupted executing LoopedThread " + name);
             }
         }
     }

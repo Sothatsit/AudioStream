@@ -1,7 +1,7 @@
 package net.sothatsit.audiostream.gui;
 
 import net.sothatsit.audiostream.AudioStream;
-import net.sothatsit.audiostream.RemoteAudioServerIndex;
+import net.sothatsit.audiostream.client.RemoteAudioServerIndex;
 import net.sothatsit.audiostream.client.Client;
 import net.sothatsit.audiostream.client.ClientState;
 import net.sothatsit.audiostream.server.Server;
@@ -26,6 +26,7 @@ public class AudioStreamGUI {
     public AudioStreamGUI(RemoteAudioServerIndex remoteServerIndex) {
         this.frame = new JFrame(AudioStream.TITLE);
 
+        frame.setPreferredSize(AudioStream.GUI_SIZE);
         frame.setDefaultCloseOperation(WindowConstants.DO_NOTHING_ON_CLOSE);
         frame.dispose();
 
@@ -83,7 +84,7 @@ public class AudioStreamGUI {
                 JOptionPane.QUESTION_MESSAGE
         );
 
-        if (chosenOption == JOptionPane.YES_OPTION){
+        if (chosenOption == JOptionPane.YES_OPTION) {
             frame.setVisible(false);
         } else {
             System.exit(0);

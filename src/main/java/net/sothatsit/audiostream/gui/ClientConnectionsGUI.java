@@ -1,8 +1,8 @@
 package net.sothatsit.audiostream.gui;
 
 import net.sothatsit.audiostream.AudioStream;
-import net.sothatsit.audiostream.RemoteAudioServer;
-import net.sothatsit.audiostream.RemoteAudioServerIndex;
+import net.sothatsit.audiostream.client.RemoteAudioServer;
+import net.sothatsit.audiostream.client.RemoteAudioServerIndex;
 import net.sothatsit.audiostream.client.Client;
 import net.sothatsit.audiostream.client.ClientManager;
 import net.sothatsit.audiostream.client.ClientSettings;
@@ -13,6 +13,7 @@ import javax.swing.*;
 import javax.swing.Timer;
 import java.awt.*;
 import java.awt.event.ActionEvent;
+import java.io.IOException;
 import java.net.*;
 import java.util.*;
 import java.util.List;
@@ -32,8 +33,13 @@ public class ClientConnectionsGUI extends JPanel {
     private final JList<Client> connectedServersList;
     private final BasicListModel<RemoteAudioServer> availableServers;
     private final BasicListModel<Client> connectedServers;
+    private final Action connectAction;
+    private final Action addAction;
+    private final Action removeAction;
+    private final Action disconnectAction;
+    private final Action viewAction;
 
-    private final Map<Client, ClientViewGUI> clientViewWindows;
+    private final Map<Client, ClientViewDialog> clientViewWindows;
 
     private ClientManager clientManager;
 
@@ -43,7 +49,6 @@ public class ClientConnectionsGUI extends JPanel {
         this.clientManager = null;
         this.clientViewWindows = new HashMap<>();
 
-        setPreferredSize(AudioStream.GUI_SIZE);
         setLayout(new GridBagLayout());
 
         GBCBuilder constraints = new GBCBuilder()
@@ -61,8 +66,8 @@ public class ClientConnectionsGUI extends JPanel {
             constraints.nextRow();
         }
 
-        { // Connection
-            add(GuiUtils.createSeparator("Connection"), constraints.build(4));
+        { // Connections
+            add(GuiUtils.createSeparator("Connections"), constraints.build(4));
             constraints.nextRow();
 
             { // Server Lists
@@ -89,54 +94,49 @@ public class ClientConnectionsGUI extends JPanel {
                 connectedServersList.setCellRenderer(new ClientListRenderer());
                 connectedServersList.setModel(connectedServers);
 
-                Action connectAction = new AbstractAction("Connect") {
+                connectAction = new AbstractAction("Connect") {
                     @Override
                     public void actionPerformed(ActionEvent e) {
                         connect();
                     }
                 };
-                Action addAction = new AbstractAction("Add New") {
+                addAction = new AbstractAction("Add") {
                     @Override
                     public void actionPerformed(ActionEvent e) {
                         addServer();
                     }
                 };
-
-                Action disconnectAction = new AbstractAction("Disconnect") {
+                removeAction = new AbstractAction("Remove") {
+                    @Override
+                    public void actionPerformed(ActionEvent e) {
+                        removeServer();
+                    }
+                };
+                disconnectAction = new AbstractAction("Disconnect") {
                     @Override
                     public void actionPerformed(ActionEvent e) {
                         disconnect();
                     }
                 };
-                Action viewAction = new AbstractAction("View Details") {
+                viewAction = new AbstractAction("View Details") {
                     @Override
                     public void actionPerformed(ActionEvent e) {
                         viewClient();
                     }
                 };
 
-                Runnable updateServerButtonStates = () -> {
-                    boolean availableSelected = !availableServersList.isSelectionEmpty();
-                    boolean connectedSelected = !connectedServersList.isSelectionEmpty();
-
-                    connectAction.setEnabled(availableSelected);
-                    disconnectAction.setEnabled(connectedSelected);
-                    viewAction.setEnabled(connectedSelected);
-                };
-                updateServerButtonStates.run();
-
                 // Only allow a selection in one of the two server lists
                 availableServersList.addListSelectionListener(e -> {
                     if (e.getValueIsAdjusting()) {
                         connectedServersList.clearSelection();
                     }
-                    updateServerButtonStates.run();
+                    update();
                 });
                 connectedServersList.addListSelectionListener(e -> {
                     if (e.getValueIsAdjusting()) {
                         availableServersList.clearSelection();
                     }
-                    updateServerButtonStates.run();
+                    update();
                 });
 
                 JScrollPane availableScrollPane = new JScrollPane(
@@ -163,7 +163,7 @@ public class ClientConnectionsGUI extends JPanel {
                         new JComponent[]{
                                 availableServersLabel,
                                 availableScrollPane,
-                                GuiUtils.buildCenteredPanel(connectAction, addAction)
+                                GuiUtils.buildCenteredPanel(connectAction, addAction, removeAction)
                         },
                         new float[]{
                                 0.0f,
@@ -212,7 +212,34 @@ public class ClientConnectionsGUI extends JPanel {
     }
 
     private void addServer() {
-        System.err.println("addServer");
+        new ServerInputDialog(parentFrame, this::addServer).show();
+    }
+
+    private void addServer(InetAddress address, int port) {
+        try {
+            remoteServerIndex.addManualServer(address, port);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void removeServer() {
+        RemoteAudioServer server = availableServersList.getSelectedValue();
+        if (server == null || !remoteServerIndex.isManuallyAddedServer(server))
+            return;
+
+        int chosenOption = JOptionPane.showConfirmDialog(
+                parentFrame,
+                "Are you sure you wish to remove the server " + server.getAddressString() + "?",
+                "Remove server " + server.getAddressString() + "?",
+                JOptionPane.YES_NO_OPTION,
+                JOptionPane.QUESTION_MESSAGE
+        );
+        if (chosenOption != JOptionPane.YES_OPTION)
+            return;
+
+        remoteServerIndex.removeManualServer(server);
+        update();
     }
 
     private void disconnect() {
@@ -228,13 +255,13 @@ public class ClientConnectionsGUI extends JPanel {
         if (client == null)
             return;
 
-        ClientViewGUI view = clientViewWindows.get(client);
+        ClientViewDialog view = clientViewWindows.get(client);
         if (view != null) {
             view.show();
             return;
         }
 
-        view = new ClientViewGUI(parentFrame, client);
+        view = new ClientViewDialog(parentFrame, client);
         view.show();
 
         clientViewWindows.put(client, view);
@@ -261,17 +288,31 @@ public class ClientConnectionsGUI extends JPanel {
         invalidClients.removeAll(clientManager.getClients());
 
         for (Client client : invalidClients) {
-            ClientViewGUI view = clientViewWindows.remove(client);
+            ClientViewDialog view = clientViewWindows.remove(client);
 
             view.dispose();
         }
 
-        clientViewWindows.values().forEach(ClientViewGUI::update);
+        clientViewWindows.values().forEach(ClientViewDialog::update);
     }
 
     public void update() {
         updateClientManager();
         updateClientViewWindows();
+
+        boolean availableSelected = !availableServersList.isSelectionEmpty();
+        boolean connectedSelected = !connectedServersList.isSelectionEmpty();
+
+        connectAction.setEnabled(availableSelected);
+        disconnectAction.setEnabled(connectedSelected);
+        viewAction.setEnabled(connectedSelected);
+
+        if (availableSelected) {
+            RemoteAudioServer selectedServer = availableServersList.getSelectedValue();
+            removeAction.setEnabled(remoteServerIndex.isManuallyAddedServer(selectedServer));
+        } else {
+            removeAction.setEnabled(false);
+        }
 
         List<RemoteAudioServer> disconnectedServers = new ArrayList<>(remoteServerIndex.getServers());
         disconnectedServers.removeAll(clientManager.getServers());

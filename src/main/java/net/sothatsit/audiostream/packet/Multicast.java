@@ -1,4 +1,6 @@
-package net.sothatsit.audiostream.util;
+package net.sothatsit.audiostream.packet;
+
+import net.sothatsit.audiostream.util.LoopedThread;
 
 import java.io.IOException;
 import java.net.*;
@@ -117,16 +119,5 @@ public class Multicast {
 
         receiverSocket = null;
         publisherSocket = null;
-    }
-
-    public static boolean isAddressLocalhost(InetAddress addr) {
-        if (addr.isAnyLocalAddress() || addr.isLoopbackAddress())
-            return true;
-
-        try {
-            return NetworkInterface.getByInetAddress(addr) != null;
-        } catch (SocketException e) {
-            return false;
-        }
     }
 }

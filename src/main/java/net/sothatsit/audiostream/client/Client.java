@@ -1,6 +1,5 @@
 package net.sothatsit.audiostream.client;
 
-import net.sothatsit.audiostream.RemoteAudioServer;
 import net.sothatsit.audiostream.util.LoopedThread;
 import net.sothatsit.audiostream.util.StreamMonitor;
 

@@ -13,9 +13,9 @@ import java.awt.*;
  *
  * @author Paddy Lamont
  */
-public class ClientViewGUI {
+public class ClientViewDialog {
 
-    private static final Dimension MINIMUM_SIZE = new Dimension(400, 100);
+    private static final Dimension DIALOG_SIZE = new Dimension(400, 100);
 
     private final Client client;
     private final JDialog dialog;
@@ -24,14 +24,14 @@ public class ClientViewGUI {
     private final JLabel formatBasicDetailsLabel;
     private final JLabel formatExtraDetailsLabel;
 
-    public ClientViewGUI(JFrame parent, Client client) {
+    public ClientViewDialog(JFrame parent, Client client) {
         this.client = client;
         this.dialog = new JDialog(parent, "Client " + client.getServer().getAddressString());
 
         dialog.setDefaultCloseOperation(JFrame.HIDE_ON_CLOSE);
         dialog.setLocationRelativeTo(parent);
         dialog.setLayout(new GridBagLayout());
-        dialog.setMinimumSize(MINIMUM_SIZE);
+        dialog.setPreferredSize(DIALOG_SIZE);
 
         GBCBuilder constraints = new GBCBuilder()
                 .anchor(GridBagConstraints.NORTHWEST)

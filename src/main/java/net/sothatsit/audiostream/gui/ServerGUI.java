@@ -36,7 +36,6 @@ public class ServerGUI extends JPanel {
         this.settingInputs = new ArrayList<>();
         this.server = null;
 
-        setPreferredSize(AudioStream.GUI_SIZE);
         setLayout(new GridBagLayout());
 
         GBCBuilder constraints = new GBCBuilder()

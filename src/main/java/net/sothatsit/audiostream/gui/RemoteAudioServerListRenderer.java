@@ -1,6 +1,6 @@
 package net.sothatsit.audiostream.gui;
 
-import net.sothatsit.audiostream.RemoteAudioServer;
+import net.sothatsit.audiostream.client.RemoteAudioServer;
 
 import javax.swing.*;
 import java.awt.*;

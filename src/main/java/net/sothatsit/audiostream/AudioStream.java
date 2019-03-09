@@ -1,15 +1,13 @@
 package net.sothatsit.audiostream;
 
 import net.sothatsit.audiostream.client.Client;
+import net.sothatsit.audiostream.client.RemoteAudioServerIndex;
 import net.sothatsit.audiostream.gui.AudioStreamGUI;
 import net.sothatsit.audiostream.gui.AudioStreamTrayIcon;
 import net.sothatsit.audiostream.server.Server;
 import net.sothatsit.audiostream.util.Apple;
 
-import javax.swing.*;
 import java.awt.*;
-import java.awt.event.ComponentAdapter;
-import java.awt.event.ComponentEvent;
 import java.util.List;
 import java.io.IOException;
 import java.net.InetAddress;
