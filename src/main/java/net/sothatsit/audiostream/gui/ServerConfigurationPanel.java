@@ -86,7 +86,7 @@ public class ServerConfigurationPanel extends PropertyPanel {
                 .weightX(1);
 
         { // Audio
-            add(GuiUtils.createSeparator("Audio"), constraints.build(4));
+            add(new PropertySeparator("Audio"), constraints.build(4));
             constraints.nextRow();
 
             AudioPropertiesPanel audioPropertiesPanel = new AudioPropertiesPanel(
@@ -100,14 +100,14 @@ public class ServerConfigurationPanel extends PropertyPanel {
         }
 
         { // Connection
-            add(GuiUtils.createSeparator("Connection"), constraints.build(4));
+            add(new PropertySeparator("Connection"), constraints.build(4));
             constraints.nextRow();
 
             { // Port
-                PropertyLabel portLabel = GuiUtils.createLabel("Port");
-                PropertyTextField portField = GuiUtils.createTextField(portString);
+                PropertyLabel portLabel = new PropertyLabel("Port");
+                PropertyTextField portField = new PropertyTextField(portString);
 
-                portLabel.setForeground(Property.ifCond("portLabelForeground", isPortValid, Color.BLACK, Color.RED));
+                portLabel.setForeground(Property.ifCond("portLabel_fg", isPortValid, Color.BLACK, Color.RED));
                 portField.setEnabled(inSetupMode);
 
                 add(portLabel, constraints.weightX(0).build());
@@ -116,11 +116,11 @@ public class ServerConfigurationPanel extends PropertyPanel {
             }
 
             { // Connection
-                PropertyLabel statusLabel = GuiUtils.createLabel(status);
+                PropertyLabel statusLabel = new PropertyLabel(status);
                 statusLabel.setForeground(Property.ifCond("status_fg", isServerRunning, Color.DARK_GRAY, Color.GRAY));
 
                 add("Status", constraints.weightX(0).build());
-                add(GuiUtils.createLabel(status), constraints.build(3));
+                add(statusLabel, constraints.build(3));
                 constraints.nextRow();
 
                 PropertyButton startButton = new PropertyButton("Start", this::start);

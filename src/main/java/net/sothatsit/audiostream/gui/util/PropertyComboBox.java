@@ -9,6 +9,7 @@ import javax.swing.event.ChangeEvent;
 import javax.swing.plaf.basic.BasicComboBoxRenderer;
 import java.awt.event.ItemEvent;
 import java.util.List;
+import java.util.function.Function;
 
 /**
  * Controls a JComboBox using Property's.
@@ -20,10 +21,57 @@ public class PropertyComboBox<E> extends PropertyJComponent<JComboBox<E>> {
     private final ListProperty<E> availableValues;
     private final Property<E> selectedValue;
 
+    public PropertyComboBox(E[] availableValues,
+                            Property<E> selectedValue) {
+
+        this(ListProperty.constant("availableValues", availableValues), selectedValue);
+    }
+
+    public PropertyComboBox(E[] availableValues,
+                            Property<E> selectedValue,
+                            Function<E, Object> toDisplayValueFn) {
+
+        this(ListProperty.constant("availableValues", availableValues), selectedValue, toDisplayValueFn);
+    }
+
+    public PropertyComboBox(E[] availableValues,
+                            Property<E> selectedValue,
+                            ListCellRenderer<? super E> renderer) {
+
+        this(ListProperty.constant("availableValues", availableValues), selectedValue, renderer);
+    }
+
+    public PropertyComboBox(List<E> availableValues,
+                            Property<E> selectedValue) {
+
+        this(ListProperty.constant("availableValues", availableValues), selectedValue);
+    }
+
+    public PropertyComboBox(List<E> availableValues,
+                            Property<E> selectedValue,
+                            Function<E, Object> toDisplayValueFn) {
+
+        this(ListProperty.constant("availableValues", availableValues), selectedValue, toDisplayValueFn);
+    }
+
+    public PropertyComboBox(List<E> availableValues,
+                            Property<E> selectedValue,
+                            ListCellRenderer<? super E> renderer) {
+
+        this(ListProperty.constant("availableValues", availableValues), selectedValue, renderer);
+    }
+
     public PropertyComboBox(ListProperty<E> availableValues,
                             Property<E> selectedValue) {
 
-        this(new JComboBox<>(), availableValues, selectedValue);
+        this(availableValues, selectedValue, getDefaultCellRenderer());
+    }
+
+    public PropertyComboBox(ListProperty<E> availableValues,
+                            Property<E> selectedValue,
+                            Function<E, Object> toDisplayValueFn) {
+
+        this(availableValues, selectedValue, createMappedRenderer(toDisplayValueFn));
     }
 
     public PropertyComboBox(ListProperty<E> availableValues,
@@ -34,10 +82,64 @@ public class PropertyComboBox<E> extends PropertyJComponent<JComboBox<E>> {
     }
 
     public PropertyComboBox(JComboBox<E> component,
+                            E[] availableValues,
+                            Property<E> selectedValue) {
+
+        this(component, ListProperty.constant("availableValues", availableValues), selectedValue);
+    }
+
+    public PropertyComboBox(JComboBox<E> component,
+                            E[] availableValues,
+                            Property<E> selectedValue,
+                            Function<E, Object> toDisplayValueFn) {
+
+        this(component, ListProperty.constant("availableValues", availableValues), selectedValue, toDisplayValueFn);
+    }
+
+    public PropertyComboBox(JComboBox<E> component,
+                            E[] availableValues,
+                            Property<E> selectedValue,
+                            ListCellRenderer<? super E> renderer) {
+
+        this(component, ListProperty.constant("availableValues", availableValues), selectedValue, renderer);
+    }
+
+    public PropertyComboBox(JComboBox<E> component,
+                            List<E> availableValues,
+                            Property<E> selectedValue) {
+
+        this(component, ListProperty.constant("availableValues", availableValues), selectedValue);
+    }
+
+    public PropertyComboBox(JComboBox<E> component,
+                            List<E> availableValues,
+                            Property<E> selectedValue,
+                            Function<E, Object> toDisplayValueFn) {
+
+        this(component, ListProperty.constant("availableValues", availableValues), selectedValue, toDisplayValueFn);
+    }
+
+    public PropertyComboBox(JComboBox<E> component,
+                            List<E> availableValues,
+                            Property<E> selectedValue,
+                            ListCellRenderer<? super E> renderer) {
+
+        this(component, ListProperty.constant("availableValues", availableValues), selectedValue, renderer);
+    }
+
+    public PropertyComboBox(JComboBox<E> component,
                             ListProperty<E> availableValues,
                             Property<E> selectedValue) {
 
         this(component, availableValues, selectedValue, getDefaultCellRenderer());
+    }
+
+    public PropertyComboBox(JComboBox<E> component,
+                            ListProperty<E> availableValues,
+                            Property<E> selectedValue,
+                            Function<E, Object> toDisplayValueFn) {
+
+        this(component, availableValues, selectedValue, createMappedRenderer(toDisplayValueFn));
     }
 
     public PropertyComboBox(JComboBox<E> component,
@@ -151,5 +253,9 @@ public class PropertyComboBox<E> extends PropertyJComponent<JComboBox<E>> {
 
     public static ListCellRenderer<Object> getDefaultCellRenderer() {
         return Unchecked.cast(new BasicComboBoxRenderer());
+    }
+
+    public static <E> MappedListCellRenderer<E, Object> createMappedRenderer(Function<E, Object> toDisplayValue) {
+        return new MappedListCellRenderer<>(getDefaultCellRenderer(), toDisplayValue);
     }
 }

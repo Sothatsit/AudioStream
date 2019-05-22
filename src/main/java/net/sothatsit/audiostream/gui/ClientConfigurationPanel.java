@@ -6,10 +6,7 @@ import net.sothatsit.audiostream.client.RemoteAudioServerIndex;
 import net.sothatsit.audiostream.client.Client;
 import net.sothatsit.audiostream.client.ClientManager;
 import net.sothatsit.audiostream.client.ClientSettings;
-import net.sothatsit.audiostream.gui.util.BasicListModel;
-import net.sothatsit.audiostream.gui.util.GBCBuilder;
-import net.sothatsit.audiostream.gui.util.GuiUtils;
-import net.sothatsit.audiostream.gui.util.PropertyPanel;
+import net.sothatsit.audiostream.gui.util.*;
 import net.sothatsit.audiostream.property.Property;
 import net.sothatsit.audiostream.util.Either;
 
@@ -67,7 +64,7 @@ public class ClientConfigurationPanel extends PropertyPanel {
                 .weightX(1);
 
         { // Audio
-            add(GuiUtils.createSeparator("Audio"), constraints.build(4));
+            add(new PropertySeparator("Audio"), constraints.build(4));
             constraints.nextRow();
 
             audioProperties = new AudioProperties();
@@ -97,7 +94,7 @@ public class ClientConfigurationPanel extends PropertyPanel {
         }
 
         { // Connections
-            add(GuiUtils.createSeparator("Connections"), constraints.build(4));
+            add(new PropertySeparator("Connections"), constraints.build(4));
             constraints.nextRow();
 
             { // Server Lists

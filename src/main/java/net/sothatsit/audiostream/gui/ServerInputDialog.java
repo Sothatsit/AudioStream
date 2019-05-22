@@ -20,28 +20,22 @@ public class ServerInputDialog extends PropertyDialog {
 
     private final BiConsumer<InetAddress, Integer> applyCallback;
 
-    private final Property<String> addressString;
-    private final Property<String> portString;
     private final Property<InetAddress> address;
     private final Property<Integer> port;
-
-    private final Property<Boolean> isAddressValid;
-    private final Property<Boolean> isPortValid;
-    private final Property<Boolean> isValid;
 
     public ServerInputDialog(JFrame parent, BiConsumer<InetAddress, Integer> applyCallback) {
         super(parent, "Add New Server");
 
         this.applyCallback = applyCallback;
 
-        this.addressString = Property.createNonNull("addressString", "");
-        this.portString = Property.createNonNull("portString", "");
+        Property<String> addressString = Property.createNonNull("addressString", "");
+        Property<String> portString = Property.createNonNull("portString", "");
         this.address = addressString.map("address", ServerInputDialog::parseAddress);
         this.port = portString.map("port", ServerInputDialog::parsePort);
 
-        this.isAddressValid = address.isNotNull("isAddressValid");
-        this.isPortValid = port.isNotNull("isPortValid");
-        this.isValid = Property.and(isAddressValid, isPortValid);
+        Property<Boolean> isAddressValid = address.isNotNull("isAddressValid");
+        Property<Boolean> isPortValid = port.isNotNull("isPortValid");
+        Property<Boolean> isValidServer = Property.and(isAddressValid, isPortValid);
 
         JDialog dialog = getComponent();
         dialog.setDefaultCloseOperation(JFrame.HIDE_ON_CLOSE);
@@ -56,14 +50,14 @@ public class ServerInputDialog extends PropertyDialog {
                 .insets(5, 5, 5, 5);
 
         { // Input Fields
-            PropertyLabel addressLabel = GuiUtils.createLabel("Address");
-            PropertyTextField addressField = GuiUtils.createTextField(addressString);
+            PropertyLabel addressLabel = new PropertyLabel("Address");
+            PropertyTextField addressField = new PropertyTextField(addressString);
 
-            PropertyLabel portLabel = GuiUtils.createLabel("Port");
-            PropertyTextField portField = GuiUtils.createTextField(portString);
+            PropertyLabel portLabel = new PropertyLabel("Port");
+            PropertyTextField portField = new PropertyTextField(portString);
 
-            addressLabel.setForeground(Property.ifCond("addressForeground", isAddressValid, Color.BLACK, Color.RED));
-            portLabel.setForeground(Property.ifCond("portForeground", isPortValid, Color.BLACK, Color.RED));
+            addressLabel.setForeground(Property.ifCond("addressLabel_fg", isAddressValid, Color.BLACK, Color.RED));
+            portLabel.setForeground(Property.ifCond("portLabel_fg", isPortValid, Color.BLACK, Color.RED));
 
             add(addressLabel, constraints.build());
             add(addressField, constraints.weightX(1.0).build());
@@ -78,7 +72,7 @@ public class ServerInputDialog extends PropertyDialog {
             PropertyButton addButton = new PropertyButton("Add Server", this::addServer);
             PropertyButton cancelButton = new PropertyButton("Cancel Server", this::dispose);
 
-            addButton.setEnabled(isValid);
+            addButton.setEnabled(isValidServer);
 
             add(GuiUtils.buildCenteredPanel(addButton, cancelButton), constraints.build(2));
             constraints.nextRow();

@@ -61,18 +61,17 @@ public class AudioPropertiesPanel extends PropertyPanel {
             this.availableMixers = new ListProperty<>("availableMixers", findMixers(audioType));
             properties.mixer.compareAndSet(null, availableMixers.get(0));
 
-            PropertyLabel mixerLabel = GuiUtils.createLabel("Mixer");
-            mixerCombo = GuiUtils.createComboBox(
+            mixerCombo = new PropertyComboBox<>(
                     availableMixers, properties.mixer, Mixer.Info::getName
             );
 
-            add(mixerLabel, constraints.build());
+            add("Mixer", constraints.build());
             add(mixerCombo, constraints.weightX(1.0).build(4));
             constraints.nextRow();
         }
 
         { // Audio format selection
-            encodingCombo = GuiUtils.createComboBox(
+            encodingCombo = new PropertyComboBox<>(
                     new AudioFormat.Encoding[] {
                             AudioFormat.Encoding.PCM_SIGNED,
                             AudioFormat.Encoding.PCM_UNSIGNED
@@ -81,32 +80,32 @@ public class AudioPropertiesPanel extends PropertyPanel {
                     AudioUtils::getAudioFormatEncodingHumanString
             );
 
-            bigEndianCombo = GuiUtils.createComboBox(
+            bigEndianCombo = new PropertyComboBox<>(
                     new Boolean[] {true, false},
                     properties.isBigEndian,
                     value -> (value ? "Big Endian" : "Little Endian")
             );
 
-            sampleRateCombo = GuiUtils.createComboBox(
+            sampleRateCombo = new PropertyComboBox<>(
                     new Float[] {8000f, 44100f, 48000f},
                     properties.sampleRate,
                     value -> value + " Hz"
             );
 
-            sampleSizeCombo = GuiUtils.createComboBox(
+            sampleSizeCombo = new PropertyComboBox<>(
                     new Integer[] {8, 16, 24},
                     properties.sampleSize,
                     value -> value + " bit"
             );
 
-            channelsCombo = GuiUtils.createComboBox(
+            channelsCombo = new PropertyComboBox<>(
                     new Integer[] {1, 2, 64},
                     properties.channels,
                     value -> value + " channels"
             );
 
             if (showFormatSelectors) {
-                PropertyLabel audioFormatLabel = GuiUtils.createLabel("Audio Format");
+                PropertyLabel audioFormatLabel = new PropertyLabel("Audio Format");
                 audioFormatLabel.setForeground(
                         Property.ifCond("audioFormatLabelFgColor", isSupportedAudioFormat, Color.BLACK, Color.RED)
                 );

@@ -13,6 +13,14 @@ public class PropertyLabel extends PropertyJComponent<JLabel> {
 
     private final Property<String> text;
 
+    public PropertyLabel(String text) {
+        this(Property.constant("text", text));
+    }
+
+    public PropertyLabel(Property<String> text) {
+        this(new JLabel(), text);
+    }
+
     public PropertyLabel(JLabel component, Property<String> text) {
         super(component);
 
