@@ -3,6 +3,7 @@ package net.sothatsit.audiostream.gui;
 import net.sothatsit.audiostream.AudioUtils;
 import net.sothatsit.audiostream.client.Client;
 import net.sothatsit.audiostream.client.ClientState;
+import net.sothatsit.audiostream.gui.util.GBCBuilder;
 
 import javax.sound.sampled.AudioFormat;
 import javax.swing.*;

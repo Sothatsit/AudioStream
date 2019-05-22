@@ -56,7 +56,7 @@ public class PacketReader {
         float frameRate = stream.readFloat();
         boolean isBigEndian = stream.readBoolean();
 
-        AudioFormat.Encoding encoding = AudioUtils.audioFormatEncodings.get(encodingString);
+        AudioFormat.Encoding encoding = AudioUtils.AUDIO_FORMAT_ENCODINGS.get(encodingString);
         if (encoding == null)
             throw new IllegalArgumentException("Unknown encoding " + encodingString);
 

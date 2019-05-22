@@ -6,7 +6,12 @@ import net.sothatsit.audiostream.client.RemoteAudioServerIndex;
 import net.sothatsit.audiostream.client.Client;
 import net.sothatsit.audiostream.client.ClientManager;
 import net.sothatsit.audiostream.client.ClientSettings;
-import net.sothatsit.audiostream.util.Exceptions.ValidationException;
+import net.sothatsit.audiostream.gui.util.BasicListModel;
+import net.sothatsit.audiostream.gui.util.GBCBuilder;
+import net.sothatsit.audiostream.gui.util.GuiUtils;
+import net.sothatsit.audiostream.gui.util.PropertyPanel;
+import net.sothatsit.audiostream.property.Property;
+import net.sothatsit.audiostream.util.Either;
 
 import javax.sound.sampled.*;
 import javax.swing.*;
@@ -23,12 +28,16 @@ import java.util.List;
  *
  * @author Paddy Lamont
  */
-public class ClientConnectionsGUI extends JPanel {
+public class ClientConfigurationPanel extends PropertyPanel {
+
+    // TODO : A lot of this could be updated to use properties instead of periodic updating
 
     private final JFrame parentFrame;
     private final RemoteAudioServerIndex remoteServerIndex;
 
-    private final AudioOptionsGUI audioOptions;
+    private final AudioProperties audioProperties;
+    private final Property<Either<ClientSettings, String>> clientSettings;
+
     private final JList<RemoteAudioServer> availableServersList;
     private final JList<Client> connectedServersList;
     private final BasicListModel<RemoteAudioServer> availableServers;
@@ -43,7 +52,7 @@ public class ClientConnectionsGUI extends JPanel {
 
     private ClientManager clientManager;
 
-    public ClientConnectionsGUI(JFrame parentFrame, RemoteAudioServerIndex remoteServerIndex) {
+    public ClientConfigurationPanel(JFrame parentFrame, RemoteAudioServerIndex remoteServerIndex) {
         this.parentFrame = parentFrame;
         this.remoteServerIndex = remoteServerIndex;
         this.clientManager = null;
@@ -61,8 +70,29 @@ public class ClientConnectionsGUI extends JPanel {
             add(GuiUtils.createSeparator("Audio"), constraints.build(4));
             constraints.nextRow();
 
-            audioOptions = new AudioOptionsGUI(AudioOptionsGUI.AudioType.OUTPUT, false);
-            add(audioOptions, constraints.build(4));
+            audioProperties = new AudioProperties();
+            clientSettings = Property.map(
+                    "clientSettings", audioProperties.mixer, audioProperties.audioFormat,
+                    (mixer, audioFormatEither) -> {
+                        if (audioFormatEither.isRight())
+                            return audioFormatEither.right();
+                        if (mixer == null)
+                            return Either.right("Please select a mixer");
+
+                        AudioFormat format = audioFormatEither.getLeft();
+                        int bufferSize = AudioStream.DEFAULT_BUFFER_SIZE;
+                        double reportIntervalSecs = AudioStream.DEFAULT_REPORT_INTERVAL_SECS;
+
+                        ClientSettings settings = new ClientSettings(format, mixer, bufferSize, reportIntervalSecs);
+                        return Either.left(settings);
+                    }
+            );
+
+            AudioPropertiesPanel audioPropertiesPanel = new AudioPropertiesPanel(
+                    AudioPropertiesPanel.AudioType.OUTPUT, audioProperties, false
+            );
+
+            add(audioPropertiesPanel, constraints.build(4));
             constraints.nextRow();
         }
 
@@ -268,7 +298,11 @@ public class ClientConnectionsGUI extends JPanel {
     }
 
     private void updateClientManager() {
-        ClientSettings settings = createSettings();
+        Either<ClientSettings, String> settingsEither = clientSettings.get();
+        if (settingsEither.isRight())
+            return;
+
+        ClientSettings settings = settingsEither.getLeft();
         if (clientManager != null && settings.equals(clientManager.getSettings()))
             return;
 
@@ -319,20 +353,6 @@ public class ClientConnectionsGUI extends JPanel {
 
         availableServers.replaceAll(disconnectedServers);
         connectedServers.replaceAll(clientManager.getClients());
-    }
-
-    public ClientSettings createSettings() throws ValidationException {
-        Mixer.Info mixer = audioOptions.getSelectedMixer();
-        AudioFormat format = audioOptions.getSelectedAudioFormat();
-        if (mixer == null)
-            throw new ValidationException("Please select an Audio Output");
-        if (format == null)
-            throw new ValidationException("Please select an Audio Format");
-
-        int bufferSize = AudioStream.DEFAULT_BUFFER_SIZE;
-        double reportIntervalSecs = AudioStream.DEFAULT_REPORT_INTERVAL_SECS;
-
-        return new ClientSettings(format, mixer, bufferSize, reportIntervalSecs);
     }
 
     public static boolean isValidAddress(String address) {

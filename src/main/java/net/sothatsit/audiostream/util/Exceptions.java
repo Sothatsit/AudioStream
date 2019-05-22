@@ -25,16 +25,4 @@ public class Exceptions {
 
         return errorWriter.toString();
     }
-
-    /**
-     * An exception when validating input from the GUI.
-     *
-     * @author Paddy Lamont
-     */
-    public static class ValidationException extends RuntimeException {
-
-        public ValidationException(String error) {
-            super(error);
-        }
-    }
 }

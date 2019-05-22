@@ -20,8 +20,8 @@ import java.util.List;
 public class AudioStreamGUI {
 
     private final JFrame frame;
-    private final ClientConnectionsGUI clientGUI;
-    private final ServerGUI serverGUI;
+    private final ClientConfigurationPanel clientPanel;
+    private final ServerConfigurationPanel serverPanel;
 
     public AudioStreamGUI(RemoteAudioServerIndex remoteServerIndex) {
         this.frame = new JFrame(AudioStream.TITLE);
@@ -37,13 +37,13 @@ public class AudioStreamGUI {
             }
         });
 
-        this.clientGUI = new ClientConnectionsGUI(frame, remoteServerIndex);
-        this.serverGUI = new ServerGUI();
+        this.clientPanel = new ClientConfigurationPanel(frame, remoteServerIndex);
+        this.serverPanel = new ServerConfigurationPanel();
 
         JTabbedPane pane = new JTabbedPane();
 
-        pane.add("Audio Receiving", clientGUI);
-        pane.add("Audio Broadcasting", serverGUI);
+        pane.add("Audio Receiving", clientPanel.getComponent());
+        pane.add("Audio Broadcasting", serverPanel.getComponent());
 
         frame.add(pane);
         frame.pack();
@@ -55,7 +55,7 @@ public class AudioStreamGUI {
     }
 
     public Server getServer() {
-        return serverGUI.getServer();
+        return serverPanel.getServer().get();
     }
 
     public boolean isServerRunning() {
@@ -64,7 +64,7 @@ public class AudioStreamGUI {
     }
 
     public List<Client> getClients() {
-        return clientGUI.getClients();
+        return clientPanel.getClients();
     }
 
     public boolean isClientRunning() {

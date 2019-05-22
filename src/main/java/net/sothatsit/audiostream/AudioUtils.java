@@ -1,7 +1,10 @@
 package net.sothatsit.audiostream;
 
+import com.google.gson.JsonElement;
+import com.google.gson.JsonPrimitive;
+import net.sothatsit.audiostream.config.Serializer;
+
 import javax.sound.sampled.*;
-import java.io.*;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.util.*;
@@ -13,7 +16,7 @@ import java.util.*;
  */
 public class AudioUtils {
 
-    public static final Map<String, AudioFormat.Encoding> audioFormatEncodings = new HashMap<>();
+    public static final Map<String, AudioFormat.Encoding> AUDIO_FORMAT_ENCODINGS = new HashMap<>();
     static {
         Class<AudioFormat.Encoding> formatClass = AudioFormat.Encoding.class;
         for (Field field : formatClass.getDeclaredFields()) {
@@ -28,9 +31,33 @@ public class AudioUtils {
                 throw new RuntimeException(e);
             }
 
-            audioFormatEncodings.put(encoding.toString(), encoding);
+            AUDIO_FORMAT_ENCODINGS.put(encoding.toString(), encoding);
         }
     }
+
+    public static final Serializer<Mixer.Info> MIXER_SERIALIZER = new Serializer<Mixer.Info>() {
+        @Override
+        public JsonElement serializeToJson(Mixer.Info value) {
+            return new JsonPrimitive(value.getName());
+        }
+
+        @Override
+        public Mixer.Info deserializeFromJson(JsonElement value) {
+            return getMixer(value.getAsString());
+        }
+    };
+
+    public static final Serializer<AudioFormat.Encoding> AUDIO_FORMAT_ENCODING_SERIALIZER = new Serializer<AudioFormat.Encoding>() {
+        @Override
+        public JsonElement serializeToJson(AudioFormat.Encoding value) {
+            return new JsonPrimitive(value.toString());
+        }
+
+        @Override
+        public AudioFormat.Encoding deserializeFromJson(JsonElement value) {
+            return AUDIO_FORMAT_ENCODINGS.get(value.getAsString());
+        }
+    };
 
     public static String getAudioFormatEncodingHumanString(AudioFormat.Encoding encoding) {
         if (encoding == AudioFormat.Encoding.PCM_SIGNED)

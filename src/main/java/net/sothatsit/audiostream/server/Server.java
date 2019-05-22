@@ -1,6 +1,7 @@
 package net.sothatsit.audiostream.server;
 
-import net.sothatsit.audiostream.gui.GuiUtils;
+import net.sothatsit.audiostream.gui.util.GuiUtils;
+import net.sothatsit.audiostream.property.Property;
 import net.sothatsit.audiostream.util.VariableBuffer;
 
 import javax.sound.sampled.*;
@@ -20,9 +21,9 @@ import java.util.List;
 public class Server extends Thread {
 
     private final ServerSettings settings;
+    private Property<Boolean> running;
+    private Property<Boolean> started;
 
-    private boolean running;
-    private boolean started;
     private List<Socket> connected;
     private ServerSocket serverSocket;
     private Exception threadException;
@@ -31,7 +32,9 @@ public class Server extends Thread {
         super("Server");
 
         this.settings = settings;
-        this.running = false;
+        this.running = Property.create("running");
+        this.started = Property.create("started");
+
         this.connected = new ArrayList<>();
         this.serverSocket = null;
     }
@@ -40,20 +43,20 @@ public class Server extends Thread {
         return settings;
     }
 
-    public synchronized boolean isRunning() {
-        return running;
+    public boolean isRunning() {
+        return running.get();
     }
 
-    private synchronized void setRunning(boolean running) {
-        this.running = running;
+    public Property<Boolean> getIsRunning() {
+        return running.readOnly();
     }
 
-    public synchronized boolean hasStarted() {
-        return started;
+    public boolean hasStarted() {
+        return started.get();
     }
 
-    private synchronized void setStarted(boolean started) {
-        this.started = started;
+    public Property<Boolean> getHasStarted() {
+        return started.readOnly();
     }
 
     public synchronized Socket[] getConnectedSockets() {
@@ -80,13 +83,17 @@ public class Server extends Thread {
     }
 
     public synchronized void stopGracefully() throws InterruptedException, IOException {
-        running = false;
+        running.set(false);
 
         if (!serverSocket.isClosed()) {
             serverSocket.close();
         }
 
-        started = false;
+        for (Socket connection : connected) {
+            connection.close();
+        }
+
+        started.set(false);
 
         if (!isAlive())
             throw new IllegalStateException("Thread is not running");
@@ -99,7 +106,7 @@ public class Server extends Thread {
     @Override
     public void run() {
         try {
-            setRunning(true);
+            running.set(true);
             runServer();
         } catch (Exception exception) {
             setThreadException(exception);
@@ -120,8 +127,19 @@ public class Server extends Thread {
         try {
             reader.start();
 
-            while (isRunning()) {
-                final Socket socket = serverSocket.accept();
+            while (running.get()) {
+                final Socket socket;
+                try {
+                    socket = serverSocket.accept();
+                } catch (SocketException exception) {
+                    // TODO : This feels like a hack... there should be a way to
+                    //        not have to hit this error when closing the server
+                    if ("Socket closed".equals(exception.getMessage()))
+                        break;
+
+                    throw exception;
+                }
+
                 if (socket == null)
                     continue;
 
@@ -162,7 +180,7 @@ public class Server extends Thread {
             reader.addOutBuffer(inBuffer);
 
             byte[] buffer = new byte[settings.bufferSize];
-            while (isRunning()) {
+            while (running.get()) {
                 inBuffer.pop(buffer, 0, buffer.length);
                 outStream.write(buffer, 0, buffer.length);
             }

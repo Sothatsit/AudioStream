@@ -1,11 +1,10 @@
 package net.sothatsit.audiostream.gui;
 
-import net.sothatsit.audiostream.util.Exceptions;
+import net.sothatsit.audiostream.gui.util.*;
+import net.sothatsit.audiostream.property.Property;
 
 import javax.swing.*;
-import javax.swing.event.ChangeListener;
 import java.awt.*;
-import java.awt.event.ActionEvent;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.function.BiConsumer;
@@ -15,22 +14,36 @@ import java.util.function.BiConsumer;
  *
  * @author Paddy Lamont
  */
-public class ServerInputDialog {
+public class ServerInputDialog extends PropertyDialog {
 
     private static final Dimension DIALOG_SIZE = new Dimension(400, 130);
 
     private final BiConsumer<InetAddress, Integer> applyCallback;
-    private final JDialog dialog;
 
-    private final JLabel addressLabel;
-    private final JLabel portLabel;
-    private final JTextField addressField;
-    private final JTextField portField;
+    private final Property<String> addressString;
+    private final Property<String> portString;
+    private final Property<InetAddress> address;
+    private final Property<Integer> port;
+
+    private final Property<Boolean> isAddressValid;
+    private final Property<Boolean> isPortValid;
+    private final Property<Boolean> isValid;
 
     public ServerInputDialog(JFrame parent, BiConsumer<InetAddress, Integer> applyCallback) {
-        this.applyCallback = applyCallback;
-        this.dialog = new JDialog(parent, "Add New Server");
+        super(parent, "Add New Server");
 
+        this.applyCallback = applyCallback;
+
+        this.addressString = Property.createNonNull("addressString", "");
+        this.portString = Property.createNonNull("portString", "");
+        this.address = addressString.map("address", ServerInputDialog::parseAddress);
+        this.port = portString.map("port", ServerInputDialog::parsePort);
+
+        this.isAddressValid = address.isNotNull("isAddressValid");
+        this.isPortValid = port.isNotNull("isPortValid");
+        this.isValid = Property.and(isAddressValid, isPortValid);
+
+        JDialog dialog = getComponent();
         dialog.setDefaultCloseOperation(JFrame.HIDE_ON_CLOSE);
         dialog.setLocationRelativeTo(parent);
         dialog.setLayout(new GridBagLayout());
@@ -42,66 +55,37 @@ public class ServerInputDialog {
                 .fill(GridBagConstraints.BOTH)
                 .insets(5, 5, 5, 5);
 
-        Action addAction = new AbstractAction("Add Server") {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                addServer();
-            }
-        };
-        Action cancelAction = new AbstractAction("Cancel") {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                dispose();
-            }
-        };
-
         { // Input Fields
-            addressLabel = new JLabel("Address");
-            addressField = new JTextField();
-            dialog.add(addressLabel, constraints.build());
-            dialog.add(addressField, constraints.weightX(1.0).build());
+            PropertyLabel addressLabel = GuiUtils.createLabel("Address");
+            PropertyTextField addressField = GuiUtils.createTextField(addressString);
+
+            PropertyLabel portLabel = GuiUtils.createLabel("Port");
+            PropertyTextField portField = GuiUtils.createTextField(portString);
+
+            addressLabel.setForeground(Property.ifCond("addressForeground", isAddressValid, Color.BLACK, Color.RED));
+            portLabel.setForeground(Property.ifCond("portForeground", isPortValid, Color.BLACK, Color.RED));
+
+            add(addressLabel, constraints.build());
+            add(addressField, constraints.weightX(1.0).build());
             constraints.nextRow();
 
-            portLabel = new JLabel("Port");
-            portField = new JTextField();
-            dialog.add(portLabel, constraints.build());
-            dialog.add(portField, constraints.weightX(1.0).build());
+            add(portLabel, constraints.build());
+            add(portField, constraints.weightX(1.0).build());
             constraints.nextRow();
-
-            ChangeListener modifiedListener = event -> {
-                boolean valid = true;
-
-                try {
-                    parseAddress(addressField.getText());
-                    addressLabel.setForeground(Color.BLACK);
-                } catch (UnknownHostException e) {
-                    addressLabel.setForeground(Color.RED);
-                    valid = false;
-                }
-
-                try {
-                    Integer.parseInt(portField.getText());
-                    portLabel.setForeground(Color.BLACK);
-                } catch (NumberFormatException e) {
-                    portLabel.setForeground(Color.RED);
-                    valid = false;
-                }
-
-                addAction.setEnabled(valid);
-            };
-            modifiedListener.stateChanged(null);
-
-            GuiUtils.addTextChangeListener(addressField, modifiedListener);
-            GuiUtils.addTextChangeListener(portField, modifiedListener);
         }
 
         { // Action Buttons
-            dialog.add(GuiUtils.buildCenteredPanel(addAction, cancelAction), constraints.build(2));
+            PropertyButton addButton = new PropertyButton("Add Server", this::addServer);
+            PropertyButton cancelButton = new PropertyButton("Cancel Server", this::dispose);
+
+            addButton.setEnabled(isValid);
+
+            add(GuiUtils.buildCenteredPanel(addButton, cancelButton), constraints.build(2));
             constraints.nextRow();
         }
 
         { // Empty space
-            dialog.add(new JPanel(), constraints.weightY(1.0).build());
+            add(new JPanel(), constraints.weightY(1.0).build());
             constraints.nextRow();
         }
     }
@@ -109,20 +93,11 @@ public class ServerInputDialog {
     private void addServer() {
         dispose();
 
-        InetAddress address;
-        int port;
+        InetAddress address = this.address.get();
+        Integer port = this.port.get();
 
-        try {
-            address = parseAddress(addressField.getText());
-        } catch (UnknownHostException e) {
-            throw new Exceptions.ValidationException("Invalid address");
-        }
-
-        try {
-            port = Integer.parseInt(portField.getText());
-        } catch (NumberFormatException e) {
-            throw new Exceptions.ValidationException("Invalid port");
-        }
+        if (address == null || port == null)
+            return;
 
         applyCallback.accept(address, port);
     }
@@ -142,10 +117,28 @@ public class ServerInputDialog {
         dialog.dispose();
     }
 
-    private static InetAddress parseAddress(String addressString) throws UnknownHostException {
+    /**
+     * @return {@param addressString} converted to an InetAddress, or null if invalid
+     */
+    private static InetAddress parseAddress(String addressString) {
         if (addressString.isEmpty())
-            throw new UnknownHostException("address is empty");
+            return null;
 
-        return InetAddress.getByName(addressString);
+        try {
+            return InetAddress.getByName(addressString);
+        } catch (UnknownHostException e) {
+            return null;
+        }
+    }
+
+    /**
+     * @return {@param portString} converted to an Integer, or null if invalid
+     */
+    private static Integer parsePort(String portString) {
+        try {
+            return Integer.valueOf(portString);
+        } catch (NumberFormatException e) {
+            return null;
+        }
     }
 }

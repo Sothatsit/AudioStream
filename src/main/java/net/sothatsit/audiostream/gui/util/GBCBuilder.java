@@ -1,4 +1,4 @@
-package net.sothatsit.audiostream.gui;
+package net.sothatsit.audiostream.gui.util;
 
 import java.awt.*;
 

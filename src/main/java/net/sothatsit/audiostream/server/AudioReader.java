@@ -1,12 +1,9 @@
 package net.sothatsit.audiostream.server;
 
-import net.sothatsit.audiostream.gui.GuiUtils;
-import net.sothatsit.audiostream.util.Exceptions;
+import net.sothatsit.audiostream.gui.util.GuiUtils;
 import net.sothatsit.audiostream.util.VariableBuffer;
 
 import javax.sound.sampled.*;
-import javax.swing.*;
-import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
