@@ -1,7 +1,8 @@
 package net.sothatsit.audiostream.client;
 
 import net.sothatsit.audiostream.util.LoopedThread;
-import net.sothatsit.audiostream.util.StreamMonitor;
+import net.sothatsit.audiostream.StreamMonitor;
+import net.sothatsit.property.Property;
 
 import javax.sound.sampled.*;
 import java.io.IOException;
@@ -23,9 +24,7 @@ public class Client {
     private final ClientSettings settings;
     private final LoopedThread thread;
 
-    private boolean connected;
-    private Exception connectionException;
-    private String status;
+    private final Property<ClientStatus> status;
 
     public Client(RemoteAudioServer audioServer, ClientSettings settings) {
         this.audioServer = audioServer;
@@ -38,8 +37,7 @@ public class Client {
             }
         }, RECONNECT_MILLIS);
 
-        this.connected = false;
-        this.status = "Disconnected";
+        this.status = Property.createNonNull("status", new ClientStatus(false, "Disconnected"));
     }
 
     public RemoteAudioServer getServer() {
@@ -56,14 +54,16 @@ public class Client {
             case STOPPED:
                 return ClientState.STOPPED;
 
-            case RUNNING:
-                if (connected) {
+            case RUNNING: {
+                ClientStatus status = this.status.get();
+                if (status.connected) {
                     return ClientState.CONNECTED;
-                } else if (connectionException != null) {
+                } else if (status.isErrored()) {
                     return ClientState.ERRORED;
                 } else {
                     return ClientState.CONNECTING;
                 }
+            }
 
             case ERRORED:
                 return ClientState.ERRORED;
@@ -73,25 +73,8 @@ public class Client {
         }
     }
 
-    public synchronized String getStatus() {
+    public Property<ClientStatus> getStatus() {
         return status;
-    }
-
-    public Exception getException() {
-        if (connectionException != null)
-            return connectionException;
-
-        return thread.getException();
-    }
-
-    private synchronized void setStatus(boolean connected, String status) {
-        setStatus(connected, status, (connected ? null : connectionException));
-    }
-
-    private synchronized void setStatus(boolean connected, String status, Exception connectionException) {
-        this.connected = connected;
-        this.status = status;
-        this.connectionException = connectionException;
     }
 
     public void start() {
@@ -118,7 +101,7 @@ public class Client {
                 socket = audioServer.connectToSocket();
                 InputStream stream = socket.getInputStream();
 
-                setStatus(true, "Connected");
+                status.set(new ClientStatus(true, "Connected"));
 
                 byte[] buffer = new byte[settings.bufferSize];
                 int totalBytes = 0;
@@ -137,7 +120,7 @@ public class Client {
                     int frameAlignedBytes = totalFrames * frameSize;
 
                     outLine.write(buffer, 0, frameAlignedBytes);
-                    setStatus(true, monitor.update(buffer, 0, frameAlignedBytes));
+                    status.set(new ClientStatus(true, monitor.update(buffer, 0, frameAlignedBytes)));
 
                     int leftOver = totalBytes - frameAlignedBytes;
                     if (leftOver > 0) {
@@ -153,7 +136,7 @@ public class Client {
                 exitStatus = "There was an error: " + e.getMessage();
                 throw e;
             } finally {
-                setStatus(false, exitStatus, connectionException);
+                status.set(new ClientStatus(false, exitStatus, connectionException));
 
                 // Close the socket if it is open
                 if (socket != null && socket.isConnected()) {

@@ -1,6 +1,6 @@
 package net.sothatsit.audiostream.server;
 
-import net.sothatsit.audiostream.gui.util.GuiUtils;
+import net.sothatsit.property.gui.GuiUtils;
 import net.sothatsit.audiostream.util.VariableBuffer;
 
 import javax.sound.sampled.*;

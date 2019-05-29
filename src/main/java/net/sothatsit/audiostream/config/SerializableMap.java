@@ -2,11 +2,11 @@ package net.sothatsit.audiostream.config;
 
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import net.sothatsit.audiostream.property.ChangeEventSource;
-import net.sothatsit.audiostream.property.ChangePropagatingMapProperty;
-import net.sothatsit.audiostream.property.NonNullProperty;
-import net.sothatsit.audiostream.property.Property;
-import net.sothatsit.audiostream.util.Unchecked;
+import net.sothatsit.property.ChangeEventSource;
+import net.sothatsit.property.ChangePropagatingMapProperty;
+import net.sothatsit.property.NonNullProperty;
+import net.sothatsit.property.Property;
+import net.sothatsit.property.Unchecked;
 
 import java.util.Map;
 

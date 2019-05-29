@@ -1,8 +1,7 @@
 package net.sothatsit.audiostream.config;
 
 import com.google.gson.JsonElement;
-import net.sothatsit.audiostream.property.ModifiableProperty;
-import net.sothatsit.audiostream.property.Property;
+import net.sothatsit.property.ModifiableProperty;
 
 /**
  * A Property that can be serialized.

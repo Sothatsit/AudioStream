@@ -1,6 +1,6 @@
 package net.sothatsit.audiostream.client;
 
-import net.sothatsit.audiostream.util.StreamMonitor;
+import net.sothatsit.audiostream.StreamMonitor;
 
 import javax.sound.sampled.*;
 

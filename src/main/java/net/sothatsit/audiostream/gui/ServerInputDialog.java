@@ -1,7 +1,7 @@
 package net.sothatsit.audiostream.gui;
 
-import net.sothatsit.audiostream.gui.util.*;
-import net.sothatsit.audiostream.property.Property;
+import net.sothatsit.property.Property;
+import net.sothatsit.property.gui.*;
 
 import javax.swing.*;
 import java.awt.*;

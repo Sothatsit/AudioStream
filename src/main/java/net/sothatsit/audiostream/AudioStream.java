@@ -2,7 +2,7 @@ package net.sothatsit.audiostream;
 
 import net.sothatsit.audiostream.client.Client;
 import net.sothatsit.audiostream.client.RemoteAudioServerIndex;
-import net.sothatsit.audiostream.gui.AudioStreamGUI;
+import net.sothatsit.audiostream.gui.AudioStreamWindow;
 import net.sothatsit.audiostream.gui.AudioStreamTrayIcon;
 import net.sothatsit.audiostream.server.Server;
 import net.sothatsit.audiostream.util.Apple;
@@ -12,6 +12,7 @@ import java.util.List;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.util.Map;
 
 /**
  * Stores information about the program.
@@ -48,7 +49,7 @@ public class AudioStream {
 
 
     private final RemoteAudioServerIndex serverIndex;
-    private final AudioStreamGUI gui;
+    private final AudioStreamWindow gui;
     private final AudioStreamTrayIcon trayIcon;
 
     public AudioStream() {
@@ -57,7 +58,7 @@ public class AudioStream {
         }
 
         this.serverIndex = new RemoteAudioServerIndex(this);
-        this.gui = new AudioStreamGUI(serverIndex);
+        this.gui = new AudioStreamWindow(serverIndex);
         this.trayIcon = new AudioStreamTrayIcon(this);
 
         MenuItem openItem = new MenuItem("Open Window");

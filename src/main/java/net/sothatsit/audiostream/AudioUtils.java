@@ -59,7 +59,7 @@ public class AudioUtils {
         }
     };
 
-    public static String getAudioFormatEncodingHumanString(AudioFormat.Encoding encoding) {
+    public static String toHumanString(AudioFormat.Encoding encoding) {
         if (encoding == AudioFormat.Encoding.PCM_SIGNED)
             return "Signed";
         if (encoding == AudioFormat.Encoding.PCM_UNSIGNED)
@@ -73,7 +73,7 @@ public class AudioUtils {
         return encoding.toString();
     }
 
-    public static String getAudioFormatChannelsHumanString(int channels) {
+    public static String convertChannelsToHumanString(int channels) {
         if (channels == 1)
             return "Mono";
         if (channels == 2)

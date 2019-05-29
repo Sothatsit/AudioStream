@@ -15,8 +15,8 @@ public class LoopedThread {
     private final long delay;
     private final boolean daemon;
 
+    private final AtomicBoolean enabled;
     private Thread thread;
-    private AtomicBoolean enabled;
     private Exception exception;
 
     public LoopedThread(String name, Runnable task) {
@@ -184,7 +184,7 @@ public class LoopedThread {
 
             if (!enabled.get())
                 break;
-            if (delay == 0)
+            if (delay <= 0)
                 continue;
 
             try {

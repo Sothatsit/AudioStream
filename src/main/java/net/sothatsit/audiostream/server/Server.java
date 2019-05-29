@@ -1,7 +1,7 @@
 package net.sothatsit.audiostream.server;
 
-import net.sothatsit.audiostream.gui.util.GuiUtils;
-import net.sothatsit.audiostream.property.Property;
+import net.sothatsit.property.gui.GuiUtils;
+import net.sothatsit.property.Property;
 import net.sothatsit.audiostream.util.VariableBuffer;
 
 import javax.sound.sampled.*;

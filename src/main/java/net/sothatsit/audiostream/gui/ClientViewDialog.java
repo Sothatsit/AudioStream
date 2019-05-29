@@ -3,7 +3,9 @@ package net.sothatsit.audiostream.gui;
 import net.sothatsit.audiostream.AudioUtils;
 import net.sothatsit.audiostream.client.Client;
 import net.sothatsit.audiostream.client.ClientState;
-import net.sothatsit.audiostream.gui.util.GBCBuilder;
+import net.sothatsit.audiostream.client.ClientStatus;
+import net.sothatsit.property.gui.GBCBuilder;
+import net.sothatsit.property.gui.PropertyLabel;
 
 import javax.sound.sampled.AudioFormat;
 import javax.swing.*;
@@ -21,9 +23,7 @@ public class ClientViewDialog {
     private final Client client;
     private final JDialog dialog;
 
-    private final JLabel statusLabel;
-    private final JLabel formatBasicDetailsLabel;
-    private final JLabel formatExtraDetailsLabel;
+    private final PropertyLabel statusLabel;
 
     public ClientViewDialog(JFrame parent, Client client) {
         this.client = client;
@@ -40,18 +40,29 @@ public class ClientViewDialog {
                 .insets(5, 5, 5, 5);
 
         { // Status
-            statusLabel = new JLabel();
+            statusLabel = new PropertyLabel(client.getStatus().map("status", ClientStatus::getMessage));
             statusLabel.setForeground(Color.DARK_GRAY);
             dialog.add(new JLabel("Client Status"), constraints.build());
-            dialog.add(statusLabel, constraints.weightX(1.0).build());
+            dialog.add(statusLabel.getComponent(), constraints.weightX(1.0).build());
             constraints.nextRow();
+        }
+
+        { // Audio Format
+            AudioFormat format = client.getSettings().format;
 
             JLabel formatTitleLabel = new JLabel("Audio Format");
             formatTitleLabel.setVerticalAlignment(JLabel.TOP);
             formatTitleLabel.setVerticalTextPosition(JLabel.TOP);
 
-            formatBasicDetailsLabel = new JLabel();
-            formatExtraDetailsLabel = new JLabel();
+            JLabel formatBasicDetailsLabel = new JLabel(
+                    format.getFrameRate() + " Hz "
+                            + AudioUtils.convertChannelsToHumanString(format.getChannels())
+            );
+            JLabel formatExtraDetailsLabel = new JLabel(
+                    format.getSampleSizeInBits() + "-bit "
+                            + AudioUtils.toHumanString(format.getEncoding()).toLowerCase()
+                            + " " + (format.isBigEndian() ? "big-endian" : "little-endian")
+            );
             formatBasicDetailsLabel.setForeground(Color.DARK_GRAY);
             formatExtraDetailsLabel.setForeground(Color.DARK_GRAY);
 
@@ -82,7 +93,6 @@ public class ClientViewDialog {
     }
 
     public void update() {
-        statusLabel.setText(client.getStatus());
         ClientState clientState = client.getState();
         switch (clientState) {
             case STOPPED:
@@ -101,17 +111,6 @@ public class ClientViewDialog {
             default:
                 throw new IllegalStateException("Unknown ClientState " + clientState);
         }
-
-        AudioFormat format = client.getSettings().format;
-        formatBasicDetailsLabel.setText(
-                format.getFrameRate() + " Hz "
-                + AudioUtils.getAudioFormatChannelsHumanString(format.getChannels())
-        );
-        formatExtraDetailsLabel.setText(
-                format.getSampleSizeInBits() + "-bit "
-                + AudioUtils.getAudioFormatEncodingHumanString(format.getEncoding()).toLowerCase()
-                + " " + (format.isBigEndian() ? "big-endian" : "little-endian")
-        );
     }
 
     public void dispose() {

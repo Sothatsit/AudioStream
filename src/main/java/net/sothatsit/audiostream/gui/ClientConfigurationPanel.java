@@ -6,9 +6,9 @@ import net.sothatsit.audiostream.client.RemoteAudioServerIndex;
 import net.sothatsit.audiostream.client.Client;
 import net.sothatsit.audiostream.client.ClientManager;
 import net.sothatsit.audiostream.client.ClientSettings;
-import net.sothatsit.audiostream.gui.util.*;
-import net.sothatsit.audiostream.property.Property;
-import net.sothatsit.audiostream.util.Either;
+import net.sothatsit.property.Property;
+import net.sothatsit.property.Either;
+import net.sothatsit.property.gui.*;
 
 import javax.sound.sampled.*;
 import javax.swing.*;

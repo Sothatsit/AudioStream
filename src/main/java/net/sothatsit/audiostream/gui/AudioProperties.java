@@ -2,10 +2,10 @@ package net.sothatsit.audiostream.gui;
 
 import net.sothatsit.audiostream.AudioUtils;
 import net.sothatsit.audiostream.config.SerializableMap;
-import net.sothatsit.audiostream.property.MappedProperty;
-import net.sothatsit.audiostream.property.NonNullProperty;
-import net.sothatsit.audiostream.property.Property;
-import net.sothatsit.audiostream.util.Either;
+import net.sothatsit.property.MappedProperty;
+import net.sothatsit.property.NonNullProperty;
+import net.sothatsit.property.Property;
+import net.sothatsit.property.Either;
 
 import javax.sound.sampled.AudioFormat;
 import javax.sound.sampled.Mixer;
