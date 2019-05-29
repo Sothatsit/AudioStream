@@ -41,7 +41,7 @@ public class ServerConfigurationPanel extends PropertyPanel {
         Property<Boolean> isPortValid = port.isNotNull("isPortValid");
 
         this.serverSettings = Property.map(
-                "serverSettings", audioProperties.mixer, audioProperties.audioFormat, port,
+                "serverSettings", audioProperties.mixer, audioProperties.audioFormat, audioProperties.bufferSize, port,
                 ServerConfigurationPanel::constructServerSettings
         );
         Property<Boolean> hasValidServerSettings = Either.isLeft("hasValidServerSettings", serverSettings);
@@ -195,6 +195,7 @@ public class ServerConfigurationPanel extends PropertyPanel {
      */
     private static Either<ServerSettings, String> constructServerSettings(Mixer.Info mixer,
                                                                           Either<AudioFormat, String> audioFormatEither,
+                                                                          Integer bufferSize,
                                                                           Integer port) {
 
         if (mixer == null)
@@ -205,13 +206,13 @@ public class ServerConfigurationPanel extends PropertyPanel {
             return Either.right("Please select a valid port");
 
         AudioFormat format = audioFormatEither.getLeft();
-        int bufferSize = AudioStream.DEFAULT_BUFFER_SIZE;
+        int bufferSizeBytes = (bufferSize != null ? bufferSize : AudioStream.DEFAULT_BUFFER_SIZE);
         double reportIntervalSecs = AudioStream.DEFAULT_REPORT_INTERVAL_SECS;
 
         ServerSettings settings = new ServerSettings(
                 format,
                 mixer,
-                bufferSize,
+                bufferSizeBytes,
                 reportIntervalSecs,
                 port
         );

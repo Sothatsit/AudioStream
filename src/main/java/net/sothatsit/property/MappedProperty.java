@@ -13,6 +13,7 @@ import java.util.function.Supplier;
 public class MappedProperty<V> extends AbstractProperty<V> {
 
     private final Supplier<V> valueGenerator;
+    private final ChangeListenable[] updateTriggers;
     private final ChangeListener updateListener;
     private V value;
 
@@ -20,6 +21,7 @@ public class MappedProperty<V> extends AbstractProperty<V> {
         super(name);
 
         this.valueGenerator = valueGenerator;
+        this.updateTriggers = updateTriggers;
 
         this.updateListener = event -> updateValue(true);
         for (ChangeListenable updateTrigger : updateTriggers) {

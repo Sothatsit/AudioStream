@@ -74,7 +74,7 @@ public class Client {
     }
 
     public Property<ClientStatus> getStatus() {
-        return status;
+        return status.readOnly();
     }
 
     public void start() {

@@ -69,18 +69,18 @@ public class ClientConfigurationPanel extends PropertyPanel {
 
             audioProperties = new AudioProperties();
             clientSettings = Property.map(
-                    "clientSettings", audioProperties.mixer, audioProperties.audioFormat,
-                    (mixer, audioFormatEither) -> {
+                    "clientSettings", audioProperties.mixer, audioProperties.audioFormat, audioProperties.bufferSize,
+                    (mixer, audioFormatEither, bufferSize) -> {
                         if (audioFormatEither.isRight())
                             return audioFormatEither.right();
                         if (mixer == null)
                             return Either.right("Please select a mixer");
 
                         AudioFormat format = audioFormatEither.getLeft();
-                        int bufferSize = AudioStream.DEFAULT_BUFFER_SIZE;
+                        int bufferSizeBytes = (bufferSize != null ? bufferSize : AudioStream.DEFAULT_BUFFER_SIZE);
                         double reportIntervalSecs = AudioStream.DEFAULT_REPORT_INTERVAL_SECS;
 
-                        ClientSettings settings = new ClientSettings(format, mixer, bufferSize, reportIntervalSecs);
+                        ClientSettings settings = new ClientSettings(format, mixer, bufferSizeBytes, reportIntervalSecs);
                         return Either.left(settings);
                     }
             );

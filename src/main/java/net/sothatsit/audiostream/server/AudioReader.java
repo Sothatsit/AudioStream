@@ -28,7 +28,9 @@ public class AudioReader implements Runnable {
         this.format = format;
         this.line = AudioSystem.getTargetDataLine(format, mixer);
 
+        // The bufferSize must be a multiple of the sample size and the frame size
         int bufferSize = bufferSamples * format.getSampleSizeInBits() / 8;
+        bufferSize = bufferSize / format.getFrameSize() * format.getFrameSize();
         this.buffer = new byte[bufferSize];
     }
 

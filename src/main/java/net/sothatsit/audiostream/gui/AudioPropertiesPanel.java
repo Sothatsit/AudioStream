@@ -126,6 +126,19 @@ public class AudioPropertiesPanel extends PropertyPanel {
             constraints.nextRow();
         }
 
+        { // Buffering Configuration
+            PropertyComboBox<Integer> bufferSizeCombo = new PropertyComboBox<>(
+                    new Integer[] {4*1024, 8*1024, 12*1024, 16*1024, 32*1024, 64*1024},
+                    properties.bufferSize,
+                    value -> (value / 1024) + " kB"
+            );
+            bufferSizeCombo.setEnabled(isEnabled());
+
+            add("Buffer Size", constraints.build());
+            add(bufferSizeCombo, constraints.weightX(1.0).build());
+            constraints.nextRow();
+        }
+
         // Periodically update the available mixers
         new Timer(1000, event -> updateAvailableMixers()).start();
     }
