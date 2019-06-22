@@ -6,6 +6,8 @@ import net.sothatsit.audiostream.client.RemoteAudioServerIndex;
 import net.sothatsit.audiostream.client.Client;
 import net.sothatsit.audiostream.client.ClientManager;
 import net.sothatsit.audiostream.client.ClientSettings;
+import net.sothatsit.audiostream.encryption.Encryption;
+import net.sothatsit.property.Attribute;
 import net.sothatsit.property.Property;
 import net.sothatsit.property.Either;
 import net.sothatsit.property.gui.*;
@@ -33,6 +35,7 @@ public class ClientConfigurationPanel extends PropertyPanel {
     private final RemoteAudioServerIndex remoteServerIndex;
 
     private final AudioProperties audioProperties;
+    private final Attribute<Encryption> encryption;
     private final Property<Either<ClientSettings, String>> clientSettings;
 
     private final JList<RemoteAudioServer> availableServersList;
@@ -52,6 +55,7 @@ public class ClientConfigurationPanel extends PropertyPanel {
     public ClientConfigurationPanel(JFrame parentFrame, RemoteAudioServerIndex remoteServerIndex) {
         this.parentFrame = parentFrame;
         this.remoteServerIndex = remoteServerIndex;
+        this.encryption = Attribute.createNullable("encryption", null);
         this.clientManager = null;
         this.clientViewWindows = new HashMap<>();
 
@@ -230,6 +234,14 @@ public class ClientConfigurationPanel extends PropertyPanel {
         return clientManager.getClients();
     }
 
+    public Property<Encryption> getEncryption() {
+        return encryption.readOnly();
+    }
+
+    public void setEncryption(Property<Encryption> encryption) {
+        this.encryption.set(encryption);
+    }
+
     private void connect() {
         RemoteAudioServer server = availableServersList.getSelectedValue();
         if (server == null)
@@ -311,6 +323,7 @@ public class ClientConfigurationPanel extends PropertyPanel {
         }
 
         clientManager = new ClientManager(settings);
+        clientManager.setEncryption(encryption);
         clientManager.connectAll(reconnectServers);
     }
 

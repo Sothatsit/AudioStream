@@ -18,7 +18,7 @@ public class PropertyLabel extends PropertyJComponent<JLabel> {
     }
 
     public PropertyLabel(Property<String> text) {
-        this(new JLabel(), text);
+        this(new JLabel(), text); // Interested if the JComponent needs to hold a reference to these property gui wrappers
     }
 
     public PropertyLabel(JLabel component, Property<String> text) {

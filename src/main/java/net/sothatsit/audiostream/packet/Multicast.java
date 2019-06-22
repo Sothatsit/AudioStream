@@ -1,6 +1,9 @@
 package net.sothatsit.audiostream.packet;
 
+import net.sothatsit.audiostream.encryption.Encryption;
 import net.sothatsit.audiostream.util.LoopedThread;
+import net.sothatsit.property.Attribute;
+import net.sothatsit.property.Property;
 
 import java.io.IOException;
 import java.net.*;
@@ -25,15 +28,19 @@ public class Multicast {
     private MulticastSocket receiverSocket;
     private DatagramSocket publisherSocket;
 
+    private final Attribute<Encryption> encryption;
+
     public Multicast(InetAddress address, int port) {
         this.address = address;
         this.port = port;
 
-        this.receiverThread = new LoopedThread("Receive-multicast-packets-thread", () -> {
+        this.encryption = Attribute.createNullable("encryption", null);
+        this.receiverThread = new LoopedThread("receive-multicast-packets-thread", () -> {
             try {
-                receievePacket();
-            } catch (Exception e) {
-                throw new RuntimeException("Exception while reading packet", e);
+                receivePacket();
+            } catch (Exception ignored) {
+                // If another client uses different encryption or another program
+                // is using the same port we could hit an exception here.
             }
         }, 0);
         this.listeners = new ArrayList<>();
@@ -47,6 +54,30 @@ public class Multicast {
         listeners.remove(listener);
     }
 
+    public void setEncryption(Encryption encryption) {
+        this.encryption.set(encryption);
+    }
+
+    public void setEncryption(Property<Encryption> encryption) {
+        this.encryption.set(encryption);
+    }
+
+    private DatagramPacket encrypt(DatagramPacket packet) {
+        Encryption encryption = this.encryption.get();
+        if (encryption == null)
+            return packet;
+
+        return encryption.encrypt(packet);
+    }
+
+    private DatagramPacket decrypt(DatagramPacket packet) {
+        Encryption encryption = this.encryption.get();
+        if (encryption == null)
+            return packet;
+
+        return encryption.decrypt(packet);
+    }
+
     public void send(byte[] bytes) throws IOException {
         send(bytes, address);
     }
@@ -58,8 +89,7 @@ public class Multicast {
             throw new IllegalArgumentException("bytes cannot be null");
 
         DatagramPacket packet = new DatagramPacket(bytes, bytes.length, address, port);
-
-        publisherSocket.send(packet);
+        publisherSocket.send(encrypt(packet));
     }
 
     public void open() throws IOException {
@@ -98,11 +128,12 @@ public class Multicast {
         receiverThread.start();
     }
 
-    private void receievePacket() throws IOException {
+    private void receivePacket() throws IOException {
         byte[] buffer = new byte[1024];
         DatagramPacket packet = new DatagramPacket(buffer, buffer.length);
 
         receiverSocket.receive(packet);
+        packet = decrypt(packet);
 
         for (Consumer<DatagramPacket> listener : listeners) {
             listener.accept(packet);

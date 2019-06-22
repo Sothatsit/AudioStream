@@ -56,8 +56,8 @@ public class ServerInputDialog extends PropertyDialog {
             PropertyLabel portLabel = new PropertyLabel("Port");
             PropertyTextField portField = new PropertyTextField(portString);
 
-            addressLabel.setForeground(Property.ifCond("addressLabel_fg", isAddressValid, Color.BLACK, Color.RED));
-            portLabel.setForeground(Property.ifCond("portLabel_fg", isPortValid, Color.BLACK, Color.RED));
+            addressLabel.setForeground(Property.ternary("addressLabel_fg", isAddressValid, Color.BLACK, Color.RED));
+            portLabel.setForeground(Property.ternary("portLabel_fg", isPortValid, Color.BLACK, Color.RED));
 
             add(addressLabel, constraints.build());
             add(addressField, constraints.weightX(1.0).build());

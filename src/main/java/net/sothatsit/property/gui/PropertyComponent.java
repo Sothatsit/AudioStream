@@ -4,8 +4,7 @@ import net.sothatsit.property.Attribute;
 import net.sothatsit.property.Property;
 
 import java.awt.*;
-import java.awt.event.FocusEvent;
-import java.awt.event.FocusListener;
+import java.awt.event.*;
 
 /**
  * Controls a JComponent using Property's.
@@ -47,6 +46,13 @@ public class PropertyComponent<C extends Component> {
         this.foreground = Attribute.createNonNull("foreground", component.getForeground(), component::setForeground);
         this.font = Attribute.createNonNull("font", component.getFont(), component::setFont);
         this.cursor = Attribute.createNonNull("cursor", component.getCursor(), component::setCursor);
+
+        // We add a dummy listener that does nothing to the component so that this object
+        // is kept in memory always whilst the component itself is kept in memory.
+        ComponentListener referenceListener = new ComponentAdapter() {
+            private final PropertyComponent<C> reference = PropertyComponent.this;
+        };
+        component.addComponentListener(referenceListener);
     }
 
     public C getComponent() {
@@ -106,7 +112,7 @@ public class PropertyComponent<C extends Component> {
     }
 
     public Property<Boolean> isEnabled() {
-        return enabled;
+        return enabled.readOnly();
     }
 
     public void setVisible(boolean visible) {
@@ -118,7 +124,7 @@ public class PropertyComponent<C extends Component> {
     }
 
     public Property<Boolean> isVisible() {
-        return visible;
+        return visible.readOnly();
     }
 
     public void setBackground(Color background) {
@@ -130,7 +136,7 @@ public class PropertyComponent<C extends Component> {
     }
 
     public Property<Color> getBackground() {
-        return background;
+        return background.readOnly();
     }
 
     public void setForeground(Color foreground) {
@@ -142,7 +148,7 @@ public class PropertyComponent<C extends Component> {
     }
 
     public Property<Color> getForeground() {
-        return foreground;
+        return foreground.readOnly();
     }
 
     public void setFont(Font font) {
@@ -154,7 +160,7 @@ public class PropertyComponent<C extends Component> {
     }
 
     public Property<Font> getFont() {
-        return font;
+        return font.readOnly();
     }
 
     public Font deriveFont(int style) {
@@ -170,6 +176,6 @@ public class PropertyComponent<C extends Component> {
     }
 
     public Property<Cursor> getCursor() {
-        return cursor;
+        return cursor.readOnly();
     }
 }

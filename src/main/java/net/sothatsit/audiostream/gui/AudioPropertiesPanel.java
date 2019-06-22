@@ -1,6 +1,7 @@
 package net.sothatsit.audiostream.gui;
 
-import net.sothatsit.audiostream.AudioUtils;
+import net.sothatsit.audiostream.audio.AudioType;
+import net.sothatsit.audiostream.audio.AudioUtils;
 import net.sothatsit.property.ListProperty;
 import net.sothatsit.property.Property;
 import net.sothatsit.property.Either;
@@ -103,7 +104,7 @@ public class AudioPropertiesPanel extends PropertyPanel {
 
             PropertyLabel audioFormatLabel = new PropertyLabel("Audio Format");
             audioFormatLabel.setForeground(
-                    Property.ifCond("audioFormatLabelFgColor", isAudioFormatSupported, Color.BLACK, Color.RED)
+                    Property.ternary("audioFormatLabelFgColor", isAudioFormatSupported, Color.BLACK, Color.RED)
             );
 
             add(audioFormatLabel, constraints.build());
@@ -165,66 +166,6 @@ public class AudioPropertiesPanel extends PropertyPanel {
         if (audioFormatEither.isRight())
             return false;
 
-        AudioFormat format = audioFormatEither.getLeft();
-        if (mixerInfo == null || format == null)
-            return false;
-
-        Mixer mixer = AudioSystem.getMixer(mixerInfo);
-        if (mixer == null)
-            return false;
-
-        return audioType.findAvailableLines(mixer, format).length > 0;
-    }
-
-    /**
-     * Contains logic for dealing with audio sources or sinks.
-     */
-    public enum AudioType {
-        INPUT("Input") {
-            @Override
-            public Mixer.Info[] findAvailableMixers() {
-                return AudioUtils.getInputMixers();
-            }
-
-            @Override
-            public Line.Info[] findAvailableLines(Mixer mixer, AudioFormat format) {
-                DataLine.Info target = new DataLine.Info(TargetDataLine.class, format);
-                return mixer.getTargetLineInfo(target);
-            }
-        },
-
-        OUTPUT("Output") {
-            @Override
-            public Mixer.Info[] findAvailableMixers() {
-                return AudioUtils.getOutputMixers();
-            }
-
-            @Override
-            public Line.Info[] findAvailableLines(Mixer mixer, AudioFormat format) {
-                DataLine.Info target = new DataLine.Info(SourceDataLine.class, format);
-                return mixer.getTargetLineInfo(target);
-            }
-        };
-
-        private final String name;
-
-        private AudioType(String name) {
-            this.name = name;
-        }
-
-        /**
-         * @return All available mixers of this AudioType.
-         */
-        public abstract Mixer.Info[] findAvailableMixers();
-
-        /**
-         * @return All available lines on the Mixer {@param mixer} with the AudioFormat {@param format}.
-         */
-        public abstract Line.Info[] findAvailableLines(Mixer mixer, AudioFormat format);
-
-        @Override
-        public String toString() {
-            return name;
-        }
+        return AudioUtils.isAudioFormatSupported(audioType, mixerInfo, audioFormatEither.getLeft());
     }
 }

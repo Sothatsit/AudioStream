@@ -1,5 +1,9 @@
 package net.sothatsit.audiostream.client;
 
+import net.sothatsit.audiostream.encryption.Encryption;
+import net.sothatsit.property.Attribute;
+import net.sothatsit.property.Property;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -13,10 +17,12 @@ public class ClientManager {
 
     private final ClientSettings settings;
     private final List<Client> clients;
+    private final Attribute<Encryption> encryption;
 
     public ClientManager(ClientSettings settings) {
         this.settings = settings;
         this.clients = new ArrayList<>();
+        this.encryption = Attribute.createNullable("encryption", null);
     }
 
     public ClientSettings getSettings() {
@@ -39,6 +45,14 @@ public class ClientManager {
                 return client;
         }
         return null;
+    }
+
+    public Property<Encryption> getEncryption() {
+        return encryption.readOnly();
+    }
+
+    public void setEncryption(Property<Encryption> encryption) {
+        this.encryption.set(encryption);
     }
 
     public void connectAll(List<RemoteAudioServer> servers) {

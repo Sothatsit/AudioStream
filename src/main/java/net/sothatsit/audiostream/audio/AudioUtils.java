@@ -1,8 +1,9 @@
-package net.sothatsit.audiostream;
+package net.sothatsit.audiostream.audio;
 
 import com.google.gson.JsonElement;
 import com.google.gson.JsonPrimitive;
 import net.sothatsit.audiostream.config.Serializer;
+import net.sothatsit.property.Either;
 
 import javax.sound.sampled.*;
 import java.lang.reflect.Field;
@@ -181,5 +182,25 @@ public class AudioUtils {
             for (final AudioFormat format : formats)
                 System.out.println("    " + format.toString());
         }
+    }
+
+    /**
+     * @return Whether {@param audioFormat} is supported by {@param mixerInfo}.
+     */
+    public static boolean isAudioFormatSupported(AudioType audioType, Mixer.Info mixerInfo, AudioFormat format) {
+        if (mixerInfo == null || format == null)
+            return false;
+
+        Mixer mixer;
+        try {
+            mixer = AudioSystem.getMixer(mixerInfo);
+        } catch (IllegalArgumentException ignored) {
+            // If a mixer is unsupported it can throw an exception here
+            return false;
+        }
+        if (mixer == null)
+            return false;
+
+        return audioType.findAvailableLines(mixer, format).length > 0;
     }
 }

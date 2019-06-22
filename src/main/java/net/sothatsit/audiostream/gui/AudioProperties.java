@@ -1,7 +1,7 @@
 package net.sothatsit.audiostream.gui;
 
 import net.sothatsit.audiostream.AudioStream;
-import net.sothatsit.audiostream.AudioUtils;
+import net.sothatsit.audiostream.audio.AudioUtils;
 import net.sothatsit.audiostream.config.SerializableMap;
 import net.sothatsit.property.MappedProperty;
 import net.sothatsit.property.NonNullProperty;

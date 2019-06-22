@@ -10,14 +10,14 @@ import java.util.function.Consumer;
  */
 public class LoopedThread {
 
-    private final String name;
-    private final Consumer<AtomicBoolean> task;
+    protected final String name;
+    protected final Consumer<AtomicBoolean> task;
     private final long delay;
     private final boolean daemon;
 
-    private final AtomicBoolean enabled;
+    protected final AtomicBoolean enabled;
     private Thread thread;
-    private Exception exception;
+    protected Exception exception;
 
     public LoopedThread(String name, Runnable task) {
         this(name, task, 0);
@@ -174,13 +174,8 @@ public class LoopedThread {
 
     private void runLoop() {
         while (enabled.get()) {
-            try {
-                task.accept(enabled);
-            } catch (Exception e) {
-                new RuntimeException("Exception in LoopedThread " + name, e).printStackTrace();
-                exception = e;
+            if (!runTask())
                 break;
-            }
 
             if (!enabled.get())
                 break;
@@ -193,5 +188,26 @@ public class LoopedThread {
                 System.err.println("Interrupted executing LoopedThread " + name);
             }
         }
+    }
+
+    /**
+     * @return Whether to continue running despite the exception.
+     */
+    protected boolean runTask() {
+        try {
+            task.accept(enabled);
+            return true;
+        } catch (Exception e) {
+            return reportException(e);
+        }
+    }
+
+    /**
+     * @return Whether to continue running despite the exception.
+     */
+    protected boolean reportException(Exception exception) {
+        this.exception = exception;
+        new RuntimeException("Exception in LoopedThread " + name, exception).printStackTrace();
+        return false;
     }
 }

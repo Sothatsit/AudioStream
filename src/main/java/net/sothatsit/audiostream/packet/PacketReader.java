@@ -1,7 +1,7 @@
 package net.sothatsit.audiostream.packet;
 
 import net.sothatsit.audiostream.AudioStream;
-import net.sothatsit.audiostream.AudioUtils;
+import net.sothatsit.audiostream.audio.AudioUtils;
 
 import javax.sound.sampled.AudioFormat;
 import java.io.ByteArrayInputStream;

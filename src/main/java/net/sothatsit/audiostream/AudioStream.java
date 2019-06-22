@@ -25,7 +25,7 @@ public class AudioStream {
     public static String VERSION = "v1.0.0";
     public static String TITLE = NAME + " " + VERSION;
 
-    public static Dimension GUI_SIZE = new Dimension(600, 400);
+    public static Dimension GUI_SIZE = new Dimension(640, 480);
 
     public static InetAddress MULTICAST_ADDRESS;
     public static int MULTICAST_PORT = 5647;
@@ -60,6 +60,8 @@ public class AudioStream {
         this.serverIndex = new RemoteAudioServerIndex(this);
         this.gui = new AudioStreamWindow(serverIndex);
         this.trayIcon = new AudioStreamTrayIcon(this);
+
+        serverIndex.setEncryption(gui.getEncryption());
 
         MenuItem openItem = new MenuItem("Open Window");
         openItem.addActionListener(e -> gui.show());

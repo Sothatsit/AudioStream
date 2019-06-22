@@ -1,7 +1,9 @@
 package net.sothatsit.audiostream.client;
 
+import net.sothatsit.audiostream.encryption.Encryption;
 import net.sothatsit.audiostream.util.LoopedThread;
 import net.sothatsit.audiostream.StreamMonitor;
+import net.sothatsit.property.Attribute;
 import net.sothatsit.property.Property;
 
 import javax.sound.sampled.*;
@@ -23,6 +25,7 @@ public class Client {
     private final RemoteAudioServer audioServer;
     private final ClientSettings settings;
     private final LoopedThread thread;
+    private final Attribute<Encryption> encryption;
 
     private final Property<ClientStatus> status;
 
@@ -36,6 +39,7 @@ public class Client {
                 throw new RuntimeException(e);
             }
         }, RECONNECT_MILLIS);
+        this.encryption = Attribute.createNullable("encryption", null);
 
         this.status = Property.createNonNull("status", new ClientStatus(false, "Disconnected"));
     }
@@ -75,6 +79,14 @@ public class Client {
 
     public Property<ClientStatus> getStatus() {
         return status.readOnly();
+    }
+
+    public Property<Encryption> getEncryption() {
+        return encryption.readOnly();
+    }
+
+    public void setEncryption(Property<Encryption> encryption) {
+        this.encryption.set(encryption);
     }
 
     public void start() {

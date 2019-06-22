@@ -1,5 +1,7 @@
 package net.sothatsit.audiostream.server;
 
+import net.sothatsit.audiostream.encryption.Encryption;
+import net.sothatsit.property.Attribute;
 import net.sothatsit.property.gui.GuiUtils;
 import net.sothatsit.property.Property;
 import net.sothatsit.audiostream.util.VariableBuffer;
@@ -21,8 +23,9 @@ import java.util.List;
 public class Server extends Thread {
 
     private final ServerSettings settings;
-    private Property<Boolean> running;
-    private Property<Boolean> started;
+    private final Attribute<Encryption> encryption;
+    private final Property<Boolean> running;
+    private final Property<Boolean> started;
 
     private List<Socket> connected;
     private ServerSocket serverSocket;
@@ -32,6 +35,7 @@ public class Server extends Thread {
         super("Server");
 
         this.settings = settings;
+        this.encryption = Attribute.createNullable("encryption", null);
         this.running = Property.create("running");
         this.started = Property.create("started");
 
@@ -61,6 +65,14 @@ public class Server extends Thread {
 
     public synchronized Socket[] getConnectedSockets() {
         return connected.toArray(new Socket[0]);
+    }
+
+    public Property<Encryption> getEncryption() {
+        return encryption.readOnly();
+    }
+
+    public void setEncryption(Property<Encryption> encryption) {
+        this.encryption.set(encryption);
     }
 
     // TODO: Also save Thread with socket

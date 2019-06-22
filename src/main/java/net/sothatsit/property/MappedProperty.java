@@ -50,6 +50,12 @@ public class MappedProperty<V> extends AbstractProperty<V> {
     public static <A, V> MappedProperty<V> map(String name,
                                                Property<A> property,
                                                Function<A, V> function) {
+        if (name == null)
+            throw new IllegalArgumentException("name cannot be null");
+        if (property == null)
+            throw new IllegalArgumentException("property cannot be null");
+        if (function == null)
+            throw new IllegalArgumentException("function cannot be null");
 
         return new MappedProperty<>(name, () -> {
             A argument = property.get();
@@ -61,6 +67,14 @@ public class MappedProperty<V> extends AbstractProperty<V> {
                                                   Property<A> property1,
                                                   Property<B> property2,
                                                   BiFunction<A, B, V> function) {
+        if (name == null)
+            throw new IllegalArgumentException("name cannot be null");
+        if (property1 == null)
+            throw new IllegalArgumentException("property1 cannot be null");
+        if (property2 == null)
+            throw new IllegalArgumentException("property2 cannot be null");
+        if (function == null)
+            throw new IllegalArgumentException("function cannot be null");
 
         return new MappedProperty<>(name, () -> {
             A argument1 = property1.get();
@@ -74,6 +88,16 @@ public class MappedProperty<V> extends AbstractProperty<V> {
                                                      Property<B> property2,
                                                      Property<C> property3,
                                                      TriFunction<A, B, C, V> function) {
+        if (name == null)
+            throw new IllegalArgumentException("name cannot be null");
+        if (property1 == null)
+            throw new IllegalArgumentException("property1 cannot be null");
+        if (property2 == null)
+            throw new IllegalArgumentException("property2 cannot be null");
+        if (property3 == null)
+            throw new IllegalArgumentException("property3 cannot be null");
+        if (function == null)
+            throw new IllegalArgumentException("function cannot be null");
 
         return new MappedProperty<>(name, () -> {
             A argument1 = property1.get();
@@ -89,6 +113,18 @@ public class MappedProperty<V> extends AbstractProperty<V> {
                                                         Property<C> property3,
                                                         Property<D> property4,
                                                         QuadFunction<A, B, C, D, V> function) {
+        if (name == null)
+            throw new IllegalArgumentException("name cannot be null");
+        if (property1 == null)
+            throw new IllegalArgumentException("property1 cannot be null");
+        if (property2 == null)
+            throw new IllegalArgumentException("property2 cannot be null");
+        if (property3 == null)
+            throw new IllegalArgumentException("property3 cannot be null");
+        if (property4 == null)
+            throw new IllegalArgumentException("property4 cannot be null");
+        if (function == null)
+            throw new IllegalArgumentException("function cannot be null");
 
         return new MappedProperty<>(name, () -> {
             A argument1 = property1.get();
@@ -96,10 +132,22 @@ public class MappedProperty<V> extends AbstractProperty<V> {
             C argument3 = property3.get();
             D argument4 = property4.get();
             return function.apply(argument1, argument2, argument3, argument4);
-        }, property1, property2);
+        }, property1, property2, property3, property4);
     }
 
     public static <V> MappedProperty<V> mapMany(String name, Supplier<V> valueGenerator, ChangeListenable... sources) {
+        if (name == null)
+            throw new IllegalArgumentException("name cannot be null");
+        if (valueGenerator == null)
+            throw new IllegalArgumentException("valueGenerator cannot be null");
+        if (sources == null)
+            throw new IllegalArgumentException("sources cannot be null");
+
+        for (ChangeListenable source : sources) {
+            if (source == null)
+                throw new IllegalArgumentException("None of sources can be null");
+        }
+
         return new MappedProperty<>(name, valueGenerator, sources);
     }
 }

@@ -256,7 +256,7 @@ public interface Property<V> extends ChangeListenable {
      * @return A Property whose value is {@param trueValue} if
      *         {@param condition} is true, else it is {@param falseValue}.
      */
-    public static <V> MappedProperty<V> ifCond(String name, Property<Boolean> condition, V trueValue, V falseValue) {
+    public static <V> MappedProperty<V> ternary(String name, Property<Boolean> condition, V trueValue, V falseValue) {
         return condition.map(name, condValue -> (condValue != null && condValue ? trueValue : falseValue));
     }
 

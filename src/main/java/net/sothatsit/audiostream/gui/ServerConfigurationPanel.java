@@ -1,6 +1,10 @@
 package net.sothatsit.audiostream.gui;
 
 import net.sothatsit.audiostream.AudioStream;
+import net.sothatsit.audiostream.audio.AudioType;
+import net.sothatsit.audiostream.audio.AudioUtils;
+import net.sothatsit.audiostream.encryption.Encryption;
+import net.sothatsit.property.Attribute;
 import net.sothatsit.property.Property;
 import net.sothatsit.audiostream.server.Server;
 import net.sothatsit.audiostream.server.ServerSettings;
@@ -23,10 +27,12 @@ public class ServerConfigurationPanel extends PropertyPanel {
 
     private final Property<Either<ServerSettings, String>> serverSettings;
 
+    private final Attribute<Encryption> encryption;
     private final Property<Server> server;
     private final Property<String> status;
 
     public ServerConfigurationPanel() {
+        this.encryption = Attribute.createNullable("encryption", null);
         this.server = Property.create("server");
 
         Property<Boolean> inSetupMode = server.isNull("inSetupMode");
@@ -61,7 +67,7 @@ public class ServerConfigurationPanel extends PropertyPanel {
             constraints.nextRow();
 
             AudioPropertiesPanel audioPropertiesPanel = new AudioPropertiesPanel(
-                    AudioPropertiesPanel.AudioType.INPUT,
+                    AudioType.INPUT,
                     audioProperties
             );
             audioPropertiesPanel.setEnabled(inSetupMode);
@@ -78,7 +84,7 @@ public class ServerConfigurationPanel extends PropertyPanel {
                 PropertyLabel portLabel = new PropertyLabel("Port");
                 PropertyTextField portField = new PropertyTextField(portString);
 
-                portLabel.setForeground(Property.ifCond("portLabel_fg", isPortValid, Color.BLACK, Color.RED));
+                portLabel.setForeground(Property.ternary("portLabel_fg", isPortValid, Color.BLACK, Color.RED));
                 portField.setEnabled(inSetupMode);
 
                 add(portLabel, constraints.weightX(0).build());
@@ -88,7 +94,7 @@ public class ServerConfigurationPanel extends PropertyPanel {
 
             { // Connection
                 PropertyLabel statusLabel = new PropertyLabel(status);
-                statusLabel.setForeground(Property.ifCond("status_fg", isServerRunning, Color.DARK_GRAY, Color.GRAY));
+                statusLabel.setForeground(Property.ternary("status_fg", isServerRunning, Color.DARK_GRAY, Color.GRAY));
 
                 add("Status", constraints.weightX(0).build());
                 add(statusLabel, constraints.build(3));
@@ -119,6 +125,14 @@ public class ServerConfigurationPanel extends PropertyPanel {
 
     public Property<Server> getServer() {
         return server;
+    }
+
+    public Property<Encryption> getEncryption() {
+        return encryption.readOnly();
+    }
+
+    public void setEncryption(Property<Encryption> encryption) {
+        this.encryption.set(encryption);
     }
 
     // TODO : This can be removed with more use of properties...
@@ -156,6 +170,7 @@ public class ServerConfigurationPanel extends PropertyPanel {
             return;
 
         server = new Server(settingsEither.getLeft());
+        server.setEncryption(encryption);
         server.start();
 
         this.server.set(server);
@@ -197,7 +212,6 @@ public class ServerConfigurationPanel extends PropertyPanel {
                                                                           Either<AudioFormat, String> audioFormatEither,
                                                                           Integer bufferSize,
                                                                           Integer port) {
-
         if (mixer == null)
             return Either.right("Please select a mixer");
         if (audioFormatEither.isRight())
@@ -206,6 +220,9 @@ public class ServerConfigurationPanel extends PropertyPanel {
             return Either.right("Please select a valid port");
 
         AudioFormat format = audioFormatEither.getLeft();
+        if (!AudioUtils.isAudioFormatSupported(AudioType.INPUT, mixer, format))
+            return Either.right("Unsupported audio format");
+
         int bufferSizeBytes = (bufferSize != null ? bufferSize : AudioStream.DEFAULT_BUFFER_SIZE);
         double reportIntervalSecs = AudioStream.DEFAULT_REPORT_INTERVAL_SECS;
 

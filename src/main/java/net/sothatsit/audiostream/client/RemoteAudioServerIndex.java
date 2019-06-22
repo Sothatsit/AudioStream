@@ -1,12 +1,15 @@
 package net.sothatsit.audiostream.client;
 
 import net.sothatsit.audiostream.AudioStream;
+import net.sothatsit.audiostream.encryption.Encryption;
 import net.sothatsit.audiostream.packet.PacketBuilder;
 import net.sothatsit.audiostream.packet.PacketReader;
 import net.sothatsit.audiostream.packet.PacketType;
 import net.sothatsit.audiostream.server.ServerSettings;
 import net.sothatsit.audiostream.util.LoopedThread;
 import net.sothatsit.audiostream.packet.Multicast;
+import net.sothatsit.audiostream.util.RetryingLoopedThread;
+import net.sothatsit.property.Property;
 
 import javax.sound.sampled.AudioFormat;
 import java.io.IOException;
@@ -40,7 +43,7 @@ import java.util.*;
  */
 public class RemoteAudioServerIndex {
 
-    private static final int UPDATE_DELAY_MS = 5 * 1000;
+    private static final int UPDATE_DELAY_MS = 3 * 1000;
 
     private final AudioStream audioStream;
     private final Multicast multicaster;
@@ -51,11 +54,11 @@ public class RemoteAudioServerIndex {
     public RemoteAudioServerIndex(AudioStream audioStream) {
         this.audioStream = audioStream;
         this.multicaster = new Multicast(AudioStream.MULTICAST_ADDRESS, AudioStream.MULTICAST_PORT);
-        this.updateThread = new LoopedThread("RemoteAudioServerIndex-thread", () -> {
+        this.updateThread = new RetryingLoopedThread("updateRemoteAudioServerIndex", () -> {
             try {
                 update();
             } catch (Exception e) {
-                throw new RuntimeException("Exception while updating audio server index", e);
+                throw new RuntimeException(e.getMessage(), e);
             }
         }, UPDATE_DELAY_MS);
         this.foundServers = new ArrayList<>();
@@ -64,10 +67,19 @@ public class RemoteAudioServerIndex {
         multicaster.addListener(packet -> {
             try {
                 receivePacket(packet);
-            } catch (Exception e) {
-                new RuntimeException("Exception while reading packet", e).printStackTrace();
+            } catch (Exception ignored) {
+                // If another client uses different encryption or another program
+                // is using the same port we could hit an exception here.
             }
         });
+    }
+
+    public void setEncryption(Encryption encryption) {
+        multicaster.setEncryption(encryption);
+    }
+
+    public void setEncryption(Property<Encryption> encryption) {
+        multicaster.setEncryption(encryption);
     }
 
     public void start() throws IOException {

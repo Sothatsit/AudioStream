@@ -4,8 +4,10 @@ import net.sothatsit.audiostream.AudioStream;
 import net.sothatsit.audiostream.client.RemoteAudioServerIndex;
 import net.sothatsit.audiostream.client.Client;
 import net.sothatsit.audiostream.client.ClientState;
+import net.sothatsit.audiostream.encryption.Encryption;
 import net.sothatsit.audiostream.server.Server;
 import net.sothatsit.audiostream.util.Apple;
+import net.sothatsit.property.Property;
 
 import javax.swing.*;
 import java.awt.event.WindowAdapter;
@@ -23,6 +25,7 @@ public class AudioStreamWindow {
 
     private final ClientConfigurationPanel clientPanel;
     private final ServerConfigurationPanel serverPanel;
+    private final EncryptionPanel encryptionPanel;
 
     public AudioStreamWindow(RemoteAudioServerIndex remoteServerIndex) {
         this.frame = new JFrame(AudioStream.TITLE);
@@ -37,13 +40,19 @@ public class AudioStreamWindow {
             }
         });
 
+        this.encryptionPanel = new EncryptionPanel();
         this.clientPanel = new ClientConfigurationPanel(frame, remoteServerIndex);
         this.serverPanel = new ServerConfigurationPanel();
+
+        Property<Encryption> encryption = getEncryption();
+        clientPanel.setEncryption(encryption);
+        serverPanel.setEncryption(encryption);
 
         JTabbedPane pane = new JTabbedPane();
 
         pane.add("Audio Receiving", clientPanel.getComponent());
         pane.add("Audio Broadcasting", serverPanel.getComponent());
+        pane.add("Encryption", encryptionPanel.getComponent());
 
         frame.add(pane);
         frame.pack();
@@ -69,6 +78,10 @@ public class AudioStreamWindow {
                 return true;
         }
         return false;
+    }
+
+    public Property<Encryption> getEncryption() {
+        return encryptionPanel.getEncryption();
     }
 
     private void onCloseClick() {

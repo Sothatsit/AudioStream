@@ -14,11 +14,13 @@ import javax.swing.border.Border;
 public class PropertyJComponent<C extends JComponent> extends PropertyComponent<C> {
 
     private final Attribute<Border> border;
+    private final Attribute<String> tooltip;
 
     public PropertyJComponent(C component) {
         super(component);
 
         this.border = Attribute.createNullable("border", component.getBorder(), component::setBorder);
+        this.tooltip = Attribute.createNullable("tooltip", component.getToolTipText(), component::setToolTipText);
     }
 
     public void setBorder(Border border) {
@@ -30,6 +32,18 @@ public class PropertyJComponent<C extends JComponent> extends PropertyComponent<
     }
 
     public Property<Border> getBorder() {
-        return border;
+        return border.readOnly();
+    }
+
+    public void setToolTipText(String tooltip) {
+        this.tooltip.set(tooltip);
+    }
+
+    public void setToolTipText(Property<String> tooltip) {
+        this.tooltip.set(tooltip);
+    }
+
+    public Property<String> getToolTipText() {
+        return tooltip.readOnly();
     }
 }
