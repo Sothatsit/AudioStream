@@ -30,7 +30,7 @@ public class AudioStreamWindow {
     public AudioStreamWindow(RemoteAudioServerIndex remoteServerIndex) {
         this.frame = new JFrame(AudioStream.TITLE);
 
-        frame.setPreferredSize(AudioStream.GUI_SIZE);
+        frame.setPreferredSize(AudioStream.DEFAULT_GUI_SIZE);
         frame.setDefaultCloseOperation(WindowConstants.DO_NOTHING_ON_CLOSE);
 
         frame.addWindowListener(new WindowAdapter() {

@@ -30,7 +30,7 @@ public class ServerInputDialog extends PropertyDialog {
 
         Property<String> addressString = Property.createNonNull("addressString", "");
         Property<String> portString = Property.createNonNull("portString", "");
-        this.address = addressString.map("address", ServerInputDialog::parseAddress);
+        this.address = addressString.offEDT().map("address", ServerInputDialog::parseAddress);
         this.port = portString.map("port", ServerInputDialog::parsePort);
 
         Property<Boolean> isAddressValid = address.isNotNull("isAddressValid");
@@ -56,8 +56,8 @@ public class ServerInputDialog extends PropertyDialog {
             PropertyLabel portLabel = new PropertyLabel("Port");
             PropertyTextField portField = new PropertyTextField(portString);
 
-            addressLabel.setForeground(Property.ternary("addressLabel_fg", isAddressValid, Color.BLACK, Color.RED));
-            portLabel.setForeground(Property.ternary("portLabel_fg", isPortValid, Color.BLACK, Color.RED));
+            addressLabel.setForeground(Property.ternary("addressFg", isAddressValid, Color.BLACK, Color.RED));
+            portLabel.setForeground(Property.ternary("portFg", isPortValid, Color.BLACK, Color.RED));
 
             add(addressLabel, constraints.build());
             add(addressField, constraints.weightX(1.0).build());

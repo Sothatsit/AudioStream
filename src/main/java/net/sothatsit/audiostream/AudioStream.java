@@ -12,7 +12,6 @@ import java.util.List;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
-import java.util.Map;
 
 /**
  * Stores information about the program.
@@ -24,8 +23,7 @@ public class AudioStream {
     public static String NAME = "AudioStream";
     public static String VERSION = "v1.0.0";
     public static String TITLE = NAME + " " + VERSION;
-
-    public static Dimension GUI_SIZE = new Dimension(640, 480);
+    public static Dimension DEFAULT_GUI_SIZE = new Dimension(640, 480);
 
     public static InetAddress MULTICAST_ADDRESS;
     public static int MULTICAST_PORT = 5647;

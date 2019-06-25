@@ -66,6 +66,7 @@ public class ClientManager {
         }
 
         client = new Client(server, settings);
+        client.setEncryption(encryption);
 
         client.start();
         clients.add(client);

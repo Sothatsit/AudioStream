@@ -93,6 +93,20 @@ public interface Property<V> extends ChangeListenable {
     }
 
     /**
+     * @return A Property whose change events are all propagated on the EDT.
+     */
+    public default RedirectedEventsProperty<V> onEDT() {
+        return new RedirectedEventsProperty<>(this, ChangeListenerProperties.createOnEDT());
+    }
+
+    /**
+     * @return A Property whose change events are all propagated off the EDT.
+     */
+    public default RedirectedEventsProperty<V> offEDT() {
+        return new RedirectedEventsProperty<>(this, ChangeListenerProperties.createOffEDT());
+    }
+
+    /**
      * @return A wrapper around this Property that always returns a non-null version of the value
      *         of this Property, and that does not allow itself to be set to a null value.
      */

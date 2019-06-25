@@ -1,6 +1,7 @@
 package net.sothatsit.audiostream.gui;
 
 import net.sothatsit.audiostream.AudioStream;
+import net.sothatsit.audiostream.audio.AudioType;
 import net.sothatsit.audiostream.client.RemoteAudioServer;
 import net.sothatsit.audiostream.client.RemoteAudioServerIndex;
 import net.sothatsit.audiostream.client.Client;
@@ -90,7 +91,7 @@ public class ClientConfigurationPanel extends PropertyPanel {
             );
 
             AudioPropertiesPanel audioPropertiesPanel = new AudioPropertiesPanel(
-                    AudioPropertiesPanel.AudioType.OUTPUT, audioProperties, false
+                    AudioType.OUTPUT, audioProperties, false
             );
 
             add(audioPropertiesPanel, constraints.build(4));

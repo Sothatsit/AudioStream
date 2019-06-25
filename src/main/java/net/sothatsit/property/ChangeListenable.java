@@ -43,6 +43,20 @@ public interface ChangeListenable {
     }
 
     /**
+     * Add a change listener that should be invoked on the EDT.
+     */
+    public default void addOffEDTChangeListener(ChangeListener listener) {
+        addChangeListener(listener, ChangeListenerProperties.createOffEDT());
+    }
+
+    /**
+     * Add a change listener that should be invoked on the EDT.
+     */
+    public default void addWeakOffEDTChangeListener(ChangeListener listener) {
+        addChangeListener(listener, ChangeListenerProperties.createWeakOffEDT());
+    }
+
+    /**
      * Stop invoking the given ChangeListener on change events.
      */
     public void removeChangeListener(ChangeListener listener);

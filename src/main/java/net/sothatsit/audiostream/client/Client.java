@@ -1,6 +1,7 @@
 package net.sothatsit.audiostream.client;
 
 import net.sothatsit.audiostream.encryption.Encryption;
+import net.sothatsit.audiostream.packet.PacketInputStream;
 import net.sothatsit.audiostream.util.LoopedThread;
 import net.sothatsit.audiostream.StreamMonitor;
 import net.sothatsit.property.Attribute;
@@ -8,7 +9,6 @@ import net.sothatsit.property.Property;
 
 import javax.sound.sampled.*;
 import java.io.IOException;
-import java.io.InputStream;
 import java.net.ConnectException;
 import java.net.Socket;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -89,6 +89,15 @@ public class Client {
         this.encryption.set(encryption);
     }
 
+    private byte[] decrypt(byte[] packet) {
+        Encryption encryption = this.encryption.get();
+        if (encryption == null)
+            return packet;
+
+        System.out.println("decrypt");
+        return encryption.decrypt(packet);
+    }
+
     public void start() {
         thread.start();
     }
@@ -111,34 +120,17 @@ public class Client {
             try {
                 // Connect to the socket and play all received audio
                 socket = audioServer.connectToSocket();
-                InputStream stream = socket.getInputStream();
+                PacketInputStream stream = new PacketInputStream(socket.getInputStream());
 
                 status.set(new ClientStatus(true, "Connected"));
 
-                byte[] buffer = new byte[settings.bufferSize];
-                int totalBytes = 0;
-
                 StreamMonitor monitor = settings.createStreamMonitor();
                 while (enabled.get()) {
-                    int read = stream.read(buffer, totalBytes, buffer.length - totalBytes);
-                    if (read < 0)
-                        break;
+                    byte[] packet = stream.readPacket();
+                    packet = decrypt(packet);
 
-                    totalBytes += read;
-                    int totalFrames = totalBytes / frameSize;
-                    if (totalFrames == 0)
-                        continue;
-
-                    int frameAlignedBytes = totalFrames * frameSize;
-
-                    outLine.write(buffer, 0, frameAlignedBytes);
-                    status.set(new ClientStatus(true, monitor.update(buffer, 0, frameAlignedBytes)));
-
-                    int leftOver = totalBytes - frameAlignedBytes;
-                    if (leftOver > 0) {
-                        System.arraycopy(buffer, frameAlignedBytes, buffer, 0, leftOver);
-                    }
-                    totalBytes = leftOver;
+                    outLine.write(packet, 0, packet.length);
+                    status.set(new ClientStatus(true, monitor.update(packet, 0, packet.length)));
                 }
             } catch (ConnectException e) {
                 connectionException = e;

@@ -2,10 +2,7 @@ package net.sothatsit.audiostream.client;
 
 import javax.sound.sampled.AudioFormat;
 import java.io.IOException;
-import java.net.InetAddress;
-import java.net.NetworkInterface;
-import java.net.Socket;
-import java.net.SocketException;
+import java.net.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;

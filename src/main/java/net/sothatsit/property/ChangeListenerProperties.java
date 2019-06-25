@@ -11,46 +11,75 @@ import javax.swing.event.ChangeListener;
  */
 public class ChangeListenerProperties {
 
-    public final boolean invokeOnEDT;
+    public final InvocationType invocationType;
     public final boolean useWeakReference;
 
-    public ChangeListenerProperties(boolean invokeOnEDT, boolean useWeakReference) {
-        this.invokeOnEDT = invokeOnEDT;
+    public ChangeListenerProperties(InvocationType invocationType, boolean useWeakReference) {
+        this.invocationType = invocationType;
         this.useWeakReference = useWeakReference;
     }
 
-    public void invoke(ChangeListener listener, ChangeEvent e) {
-        if (!invokeOnEDT || SwingUtilities.isEventDispatchThread()) {
-            try {
-                listener.stateChanged(e);
-            } catch (Exception exception) {
-                new RuntimeException("There was an error invoking ChangeListener", exception).printStackTrace();
-            }
-            return;
-        }
+    public enum InvocationType {
+        ON_EDT,
+        OFF_EDT,
+        SAME_THREAD
+    }
 
-        SwingUtilities.invokeLater(() -> {
-            try {
-                listener.stateChanged(e);
-            } catch (Exception exception) {
-                new RuntimeException("There was an error invoking ChangeListener", exception).printStackTrace();
+    private void invokeOnThisThread(ChangeListener listener, ChangeEvent event) {
+        try {
+            listener.stateChanged(event);
+        } catch (Exception exception) {
+            new RuntimeException("There was an error invoking ChangeListener", exception).printStackTrace();
+        }
+    }
+
+    public void invoke(final ChangeListener listener, final ChangeEvent event) {
+        switch (invocationType) {
+            case ON_EDT: {
+                SwingUtilities.invokeLater(() -> invokeOnThisThread(listener, event));
+                break;
             }
-        });
+
+            case OFF_EDT: {
+                SwingWorker<Object, Object> worker = new SwingWorker<Object, Object>() {
+                    @Override
+                    protected Object doInBackground() throws Exception {
+                        invokeOnThisThread(listener, event);
+                        return null;
+                    }
+                };
+                worker.execute();
+                break;
+            }
+
+            case SAME_THREAD: {
+                invokeOnThisThread(listener, event);
+                break;
+            }
+        }
     }
 
     public static ChangeListenerProperties create() {
-        return new ChangeListenerProperties(false, false);
+        return new ChangeListenerProperties(InvocationType.SAME_THREAD, false);
     }
 
     public static ChangeListenerProperties createWeak() {
-        return new ChangeListenerProperties(false, true);
+        return new ChangeListenerProperties(InvocationType.SAME_THREAD, true);
     }
 
     public static ChangeListenerProperties createOnEDT() {
-        return new ChangeListenerProperties(true, false);
+        return new ChangeListenerProperties(InvocationType.ON_EDT, false);
     }
 
     public static ChangeListenerProperties createWeakOnEDT() {
-        return new ChangeListenerProperties(true, true);
+        return new ChangeListenerProperties(InvocationType.ON_EDT, true);
+    }
+
+    public static ChangeListenerProperties createOffEDT() {
+        return new ChangeListenerProperties(InvocationType.OFF_EDT, false);
+    }
+
+    public static ChangeListenerProperties createWeakOffEDT() {
+        return new ChangeListenerProperties(InvocationType.OFF_EDT, true);
     }
 }

@@ -15,7 +15,10 @@ public class MappedProperty<V> extends AbstractProperty<V> {
     private final Supplier<V> valueGenerator;
     private final ChangeListenable[] updateTriggers;
     private final ChangeListener updateListener;
+
+    private final Object lock = new Object();
     private V value;
+    private long lastUpdateTime = -1;
 
     public MappedProperty(String name, Supplier<V> valueGenerator, ChangeListenable... updateTriggers) {
         super(name);
@@ -35,7 +38,18 @@ public class MappedProperty<V> extends AbstractProperty<V> {
     }
 
     private void updateValue(boolean triggerUpdate) {
-        this.value = valueGenerator.get();
+        V newValue = valueGenerator.get();
+        long time = System.nanoTime();
+
+        synchronized (lock) {
+            // Check if the new value is stale
+            if (time < this.lastUpdateTime)
+                return;
+
+            // Update the value
+            this.lastUpdateTime = time;
+            this.value = newValue;
+        }
 
         if (triggerUpdate) {
             fireChangeEvent();

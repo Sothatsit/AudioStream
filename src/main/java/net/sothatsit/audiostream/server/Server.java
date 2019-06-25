@@ -1,6 +1,7 @@
 package net.sothatsit.audiostream.server;
 
 import net.sothatsit.audiostream.encryption.Encryption;
+import net.sothatsit.audiostream.packet.PacketOutputStream;
 import net.sothatsit.property.Attribute;
 import net.sothatsit.property.gui.GuiUtils;
 import net.sothatsit.property.Property;
@@ -8,7 +9,6 @@ import net.sothatsit.audiostream.util.VariableBuffer;
 
 import javax.sound.sampled.*;
 import java.io.IOException;
-import java.io.OutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketException;
@@ -73,6 +73,15 @@ public class Server extends Thread {
 
     public void setEncryption(Property<Encryption> encryption) {
         this.encryption.set(encryption);
+    }
+
+    private byte[] encrypt(byte[] packet) {
+        Encryption encryption = this.encryption.get();
+        if (encryption == null)
+            return packet;
+
+        System.out.println("encrypt");
+        return encryption.encrypt(packet);
     }
 
     // TODO: Also save Thread with socket
@@ -184,17 +193,23 @@ public class Server extends Thread {
     }
 
     public void streamToClient(AudioReader reader, Socket socket) throws IOException {
-        OutputStream outStream;
+        PacketOutputStream outStream;
         VariableBuffer inBuffer = null;
         try {
-            outStream = socket.getOutputStream();
-            inBuffer = new VariableBuffer(settings.bufferSize);
+            // Size the buffer such that it only contains whole audio frames
+            int frameSizeBytes = settings.format.getFrameSize();
+            int bufferSize = (settings.bufferSize / frameSizeBytes) * frameSizeBytes;
+
+            outStream = new PacketOutputStream(socket.getOutputStream());
+            inBuffer = new VariableBuffer(2 * bufferSize);
             reader.addOutBuffer(inBuffer);
 
-            byte[] buffer = new byte[settings.bufferSize];
+            byte[] buffer = new byte[bufferSize];
             while (running.get()) {
                 inBuffer.pop(buffer, 0, buffer.length);
-                outStream.write(buffer, 0, buffer.length);
+
+                byte[] encrypted = encrypt(buffer);
+                outStream.writePacket(encrypted, 0, encrypted.length);
             }
         } catch (SocketException exception) {
             new RuntimeException("There was an error streaming to client", exception).printStackTrace();

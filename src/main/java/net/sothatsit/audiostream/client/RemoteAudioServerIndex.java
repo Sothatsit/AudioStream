@@ -70,6 +70,7 @@ public class RemoteAudioServerIndex {
             } catch (Exception ignored) {
                 // If another client uses different encryption or another program
                 // is using the same port we could hit an exception here.
+                ignored.printStackTrace();
             }
         });
     }
