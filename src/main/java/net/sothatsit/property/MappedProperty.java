@@ -1,5 +1,8 @@
 package net.sothatsit.property;
 
+import net.sothatsit.function.*;
+import net.sothatsit.property.event.ChangeListenable;
+
 import javax.swing.event.ChangeListener;
 import java.util.function.BiFunction;
 import java.util.function.Function;
@@ -101,7 +104,7 @@ public class MappedProperty<V> extends AbstractProperty<V> {
                                                      Property<A> property1,
                                                      Property<B> property2,
                                                      Property<C> property3,
-                                                     TriFunction<A, B, C, V> function) {
+                                                     ThreeFunction<A, B, C, V> function) {
         if (name == null)
             throw new IllegalArgumentException("name cannot be null");
         if (property1 == null)
@@ -126,7 +129,7 @@ public class MappedProperty<V> extends AbstractProperty<V> {
                                                         Property<B> property2,
                                                         Property<C> property3,
                                                         Property<D> property4,
-                                                        QuadFunction<A, B, C, D, V> function) {
+                                                        FourFunction<A, B, C, D, V> function) {
         if (name == null)
             throw new IllegalArgumentException("name cannot be null");
         if (property1 == null)
@@ -147,6 +150,265 @@ public class MappedProperty<V> extends AbstractProperty<V> {
             D argument4 = property4.get();
             return function.apply(argument1, argument2, argument3, argument4);
         }, property1, property2, property3, property4);
+    }
+
+    public static <A, B, C, D, E, V> MappedProperty<V> map(String name,
+                                                        Property<A> property1,
+                                                        Property<B> property2,
+                                                        Property<C> property3,
+                                                        Property<D> property4,
+                                                        Property<E> property5,
+                                                        FiveFunction<A, B, C, D, E, V> function) {
+        if (name == null)
+            throw new IllegalArgumentException("name cannot be null");
+        if (property1 == null)
+            throw new IllegalArgumentException("property1 cannot be null");
+        if (property2 == null)
+            throw new IllegalArgumentException("property2 cannot be null");
+        if (property3 == null)
+            throw new IllegalArgumentException("property3 cannot be null");
+        if (property4 == null)
+            throw new IllegalArgumentException("property4 cannot be null");
+        if (property5 == null)
+            throw new IllegalArgumentException("property5 cannot be null");
+        if (function == null)
+            throw new IllegalArgumentException("function cannot be null");
+
+        return new MappedProperty<>(name, () -> {
+            A argument1 = property1.get();
+            B argument2 = property2.get();
+            C argument3 = property3.get();
+            D argument4 = property4.get();
+            E argument5 = property5.get();
+            return function.apply(argument1, argument2, argument3, argument4, argument5);
+        }, property1, property2, property3, property4, property5);
+    }
+
+    public static <A, B, C, D, E, F, V> MappedProperty<V> map(String name,
+                                                              Property<A> property1,
+                                                              Property<B> property2,
+                                                              Property<C> property3,
+                                                              Property<D> property4,
+                                                              Property<E> property5,
+                                                              Property<F> property6,
+                                                              SixFunction<A, B, C, D, E, F, V> function) {
+        if (name == null)
+            throw new IllegalArgumentException("name cannot be null");
+        if (property1 == null)
+            throw new IllegalArgumentException("property1 cannot be null");
+        if (property2 == null)
+            throw new IllegalArgumentException("property2 cannot be null");
+        if (property3 == null)
+            throw new IllegalArgumentException("property3 cannot be null");
+        if (property4 == null)
+            throw new IllegalArgumentException("property4 cannot be null");
+        if (property5 == null)
+            throw new IllegalArgumentException("property5 cannot be null");
+        if (property6 == null)
+            throw new IllegalArgumentException("property6 cannot be null");
+        if (function == null)
+            throw new IllegalArgumentException("function cannot be null");
+
+        return new MappedProperty<>(name, () -> {
+            A argument1 = property1.get();
+            B argument2 = property2.get();
+            C argument3 = property3.get();
+            D argument4 = property4.get();
+            E argument5 = property5.get();
+            F argument6 = property6.get();
+            return function.apply(argument1, argument2, argument3, argument4, argument5, argument6);
+        }, property1, property2, property3, property4, property5, property6);
+    }
+
+    public static <A, B, C, D, E, F, G, V> MappedProperty<V> map(String name,
+                                                              Property<A> property1,
+                                                              Property<B> property2,
+                                                              Property<C> property3,
+                                                              Property<D> property4,
+                                                              Property<E> property5,
+                                                              Property<F> property6,
+                                                              Property<G> property7,
+                                                              SevenFunction<A, B, C, D, E, F, G, V> function) {
+        if (name == null)
+            throw new IllegalArgumentException("name cannot be null");
+        if (property1 == null)
+            throw new IllegalArgumentException("property1 cannot be null");
+        if (property2 == null)
+            throw new IllegalArgumentException("property2 cannot be null");
+        if (property3 == null)
+            throw new IllegalArgumentException("property3 cannot be null");
+        if (property4 == null)
+            throw new IllegalArgumentException("property4 cannot be null");
+        if (property5 == null)
+            throw new IllegalArgumentException("property5 cannot be null");
+        if (property6 == null)
+            throw new IllegalArgumentException("property6 cannot be null");
+        if (property7 == null)
+            throw new IllegalArgumentException("property7 cannot be null");
+        if (function == null)
+            throw new IllegalArgumentException("function cannot be null");
+
+        return new MappedProperty<>(name, () -> {
+            A argument1 = property1.get();
+            B argument2 = property2.get();
+            C argument3 = property3.get();
+            D argument4 = property4.get();
+            E argument5 = property5.get();
+            F argument6 = property6.get();
+            G argument7 = property7.get();
+            return function.apply(argument1, argument2, argument3, argument4, argument5, argument6, argument7);
+        }, property1, property2, property3, property4, property5, property6, property7);
+    }
+
+    public static <A, B, C, D, E, F, G, H, V> MappedProperty<V> map(String name,
+                                                                    Property<A> property1,
+                                                                    Property<B> property2,
+                                                                    Property<C> property3,
+                                                                    Property<D> property4,
+                                                                    Property<E> property5,
+                                                                    Property<F> property6,
+                                                                    Property<G> property7,
+                                                                    Property<H> property8,
+                                                                    EightFunction<A, B, C, D, E, F, G, H, V> function) {
+        if (name == null)
+            throw new IllegalArgumentException("name cannot be null");
+        if (property1 == null)
+            throw new IllegalArgumentException("property1 cannot be null");
+        if (property2 == null)
+            throw new IllegalArgumentException("property2 cannot be null");
+        if (property3 == null)
+            throw new IllegalArgumentException("property3 cannot be null");
+        if (property4 == null)
+            throw new IllegalArgumentException("property4 cannot be null");
+        if (property5 == null)
+            throw new IllegalArgumentException("property5 cannot be null");
+        if (property6 == null)
+            throw new IllegalArgumentException("property6 cannot be null");
+        if (property7 == null)
+            throw new IllegalArgumentException("property7 cannot be null");
+        if (property8 == null)
+            throw new IllegalArgumentException("property8 cannot be null");
+        if (function == null)
+            throw new IllegalArgumentException("function cannot be null");
+
+        return new MappedProperty<>(name, () -> {
+            A argument1 = property1.get();
+            B argument2 = property2.get();
+            C argument3 = property3.get();
+            D argument4 = property4.get();
+            E argument5 = property5.get();
+            F argument6 = property6.get();
+            G argument7 = property7.get();
+            H argument8 = property8.get();
+            return function.apply(
+                    argument1, argument2, argument3, argument4, argument5, argument6, argument7, argument8
+            );
+        }, property1, property2, property3, property4, property5, property6, property7, property8);
+    }
+
+    public static <A, B, C, D, E, F, G, H, I, V> MappedProperty<V> map(String name,
+                                                                       Property<A> property1,
+                                                                       Property<B> property2,
+                                                                       Property<C> property3,
+                                                                       Property<D> property4,
+                                                                       Property<E> property5,
+                                                                       Property<F> property6,
+                                                                       Property<G> property7,
+                                                                       Property<H> property8,
+                                                                       Property<I> property9,
+                                                                       NineFunction<A, B, C, D, E, F, G, H, I, V> function) {
+        if (name == null)
+            throw new IllegalArgumentException("name cannot be null");
+        if (property1 == null)
+            throw new IllegalArgumentException("property1 cannot be null");
+        if (property2 == null)
+            throw new IllegalArgumentException("property2 cannot be null");
+        if (property3 == null)
+            throw new IllegalArgumentException("property3 cannot be null");
+        if (property4 == null)
+            throw new IllegalArgumentException("property4 cannot be null");
+        if (property5 == null)
+            throw new IllegalArgumentException("property5 cannot be null");
+        if (property6 == null)
+            throw new IllegalArgumentException("property6 cannot be null");
+        if (property7 == null)
+            throw new IllegalArgumentException("property7 cannot be null");
+        if (property8 == null)
+            throw new IllegalArgumentException("property8 cannot be null");
+        if (property9 == null)
+            throw new IllegalArgumentException("property9 cannot be null");
+        if (function == null)
+            throw new IllegalArgumentException("function cannot be null");
+
+        return new MappedProperty<>(name, () -> {
+            A argument1 = property1.get();
+            B argument2 = property2.get();
+            C argument3 = property3.get();
+            D argument4 = property4.get();
+            E argument5 = property5.get();
+            F argument6 = property6.get();
+            G argument7 = property7.get();
+            H argument8 = property8.get();
+            I argument9 = property9.get();
+            return function.apply(
+                    argument1, argument2, argument3, argument4, argument5, argument6, argument7, argument8, argument9
+            );
+        }, property1, property2, property3, property4, property5, property6, property7, property8, property9);
+    }
+
+    public static <A, B, C, D, E, F, G, H, I, J, V> MappedProperty<V> map(String name,
+                                                                          Property<A> property1,
+                                                                          Property<B> property2,
+                                                                          Property<C> property3,
+                                                                          Property<D> property4,
+                                                                          Property<E> property5,
+                                                                          Property<F> property6,
+                                                                          Property<G> property7,
+                                                                          Property<H> property8,
+                                                                          Property<I> property9,
+                                                                          Property<J> property10,
+                                                                          TenFunction<A, B, C, D, E, F, G, H, I, J, V> function) {
+        if (name == null)
+            throw new IllegalArgumentException("name cannot be null");
+        if (property1 == null)
+            throw new IllegalArgumentException("property1 cannot be null");
+        if (property2 == null)
+            throw new IllegalArgumentException("property2 cannot be null");
+        if (property3 == null)
+            throw new IllegalArgumentException("property3 cannot be null");
+        if (property4 == null)
+            throw new IllegalArgumentException("property4 cannot be null");
+        if (property5 == null)
+            throw new IllegalArgumentException("property5 cannot be null");
+        if (property6 == null)
+            throw new IllegalArgumentException("property6 cannot be null");
+        if (property7 == null)
+            throw new IllegalArgumentException("property7 cannot be null");
+        if (property8 == null)
+            throw new IllegalArgumentException("property8 cannot be null");
+        if (property9 == null)
+            throw new IllegalArgumentException("property9 cannot be null");
+        if (property10 == null)
+            throw new IllegalArgumentException("property10 cannot be null");
+        if (function == null)
+            throw new IllegalArgumentException("function cannot be null");
+
+        return new MappedProperty<>(name, () -> {
+            A argument1 = property1.get();
+            B argument2 = property2.get();
+            C argument3 = property3.get();
+            D argument4 = property4.get();
+            E argument5 = property5.get();
+            F argument6 = property6.get();
+            G argument7 = property7.get();
+            H argument8 = property8.get();
+            I argument9 = property9.get();
+            J argument10 = property10.get();
+            return function.apply(
+                    argument1, argument2, argument3, argument4, argument5,
+                    argument6, argument7, argument8, argument9, argument10
+            );
+        }, property1, property2, property3, property4, property5, property6, property7, property8, property9, property10);
     }
 
     public static <V> MappedProperty<V> mapMany(String name, Supplier<V> valueGenerator, ChangeListenable... sources) {

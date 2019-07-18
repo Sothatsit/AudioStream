@@ -1,5 +1,8 @@
 package net.sothatsit.property;
 
+import net.sothatsit.function.Unchecked;
+import net.sothatsit.property.event.ChangeListenable;
+
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 import java.util.Collections;

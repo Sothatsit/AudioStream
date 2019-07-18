@@ -1,5 +1,7 @@
 package net.sothatsit.property;
 
+import net.sothatsit.property.event.ChangeListenerProperties;
+
 import javax.swing.event.ChangeListener;
 import java.util.Objects;
 

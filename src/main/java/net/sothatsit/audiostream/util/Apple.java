@@ -59,9 +59,13 @@ public class Apple {
         return isApplicationAvailable();
     }
 
-    public static void addDockListener(Runnable listener) {
-        Application application = Application.getApplication();
-        application.addAppEventListener((AppReOpenedListener) event -> listener.run());
+    public static RemovableListener addDockListener(Runnable listener) {
+        AppReOpenedListener dockListener = event -> listener.run();
+        AppleAppEventListener appleListener = new AppleAppEventListener(dockListener);
+
+        appleListener.add();
+
+        return appleListener;
     }
 
     public static boolean isDockIconAvailable() {

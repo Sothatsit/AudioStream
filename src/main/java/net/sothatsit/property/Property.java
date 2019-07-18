@@ -1,5 +1,9 @@
 package net.sothatsit.property;
 
+import net.sothatsit.function.*;
+import net.sothatsit.property.event.ChangeListenable;
+import net.sothatsit.property.event.ChangeListenerProperties;
+
 import javax.swing.event.ChangeListener;
 import java.util.List;
 import java.util.function.BiFunction;
@@ -124,6 +128,12 @@ public interface Property<V> extends ChangeListenable {
         return map(name, this, function);
     }
 
+    // TODO : I reckon a lot of these methods that create derived properties could somehow
+    //        be stored to be re-used later. e.g. readOnly is used a lot for get methods,
+    //        which could create a needless number of identical readOnly properties.
+    //        Especially if people do class.getProperty().get(), which would result in
+    //        effectively property.readOnly().get() which is a bit wasteful.
+
     /**
      * @return A Property whose value is false if {@param property} is null, and true if it is not,
      *         and whose name is generated from the name of {@param property}.
@@ -207,7 +217,7 @@ public interface Property<V> extends ChangeListenable {
                                                      Property<A> property1,
                                                      Property<B> property2,
                                                      Property<C> property3,
-                                                     TriFunction<A, B, C, V> function) {
+                                                     ThreeFunction<A, B, C, V> function) {
 
         return MappedProperty.map(name, property1, property2, property3, function);
     }
@@ -221,9 +231,130 @@ public interface Property<V> extends ChangeListenable {
                                                         Property<B> property2,
                                                         Property<C> property3,
                                                         Property<D> property4,
-                                                        QuadFunction<A, B, C, D, V> function) {
+                                                        FourFunction<A, B, C, D, V> function) {
 
         return MappedProperty.map(name, property1, property2, property3, property4, function);
+    }
+
+    /**
+     * @return A Property whose value is mapped from {@param property1}, {@param property2},
+     *         {@param property3}, {@param property4}, and {@param property5} by {@param function}.
+     */
+    public static <A, B, C, D, E, V> MappedProperty<V> map(String name,
+                                                           Property<A> property1,
+                                                           Property<B> property2,
+                                                           Property<C> property3,
+                                                           Property<D> property4,
+                                                           Property<E> property5,
+                                                           FiveFunction<A, B, C, D, E, V> function) {
+
+        return MappedProperty.map(name, property1, property2, property3, property4, property5, function);
+    }
+
+    /**
+     * @return A Property whose value is mapped from {@param property1}, {@param property2}, {@param property3},
+     *         {@param property4}, {@param property5}, and {@param property6} by {@param function}.
+     */
+    public static <A, B, C, D, E, F, V> MappedProperty<V> map(String name,
+                                                              Property<A> property1,
+                                                              Property<B> property2,
+                                                              Property<C> property3,
+                                                              Property<D> property4,
+                                                              Property<E> property5,
+                                                              Property<F> property6,
+                                                              SixFunction<A, B, C, D, E, F, V> function) {
+
+        return MappedProperty.map(
+                name, property1, property2, property3, property4, property5, property6, function
+        );
+    }
+
+    /**
+     * @return A Property whose value is mapped from {@param property1}, {@param property2}, {@param property3},
+     *         {@param property4}, {@param property5}, {@param property6}, and {@param property7} by {@param function}.
+     */
+    public static <A, B, C, D, E, F, G, V> MappedProperty<V> map(String name,
+                                                                 Property<A> property1,
+                                                                 Property<B> property2,
+                                                                 Property<C> property3,
+                                                                 Property<D> property4,
+                                                                 Property<E> property5,
+                                                                 Property<F> property6,
+                                                                 Property<G> property7,
+                                                                 SevenFunction<A, B, C, D, E, F, G, V> function) {
+
+        return MappedProperty.map(
+                name, property1, property2, property3, property4, property5, property6, property7, function
+        );
+    }
+
+    /**
+     * @return A Property whose value is mapped from {@param property1}, {@param property2},
+     *          {@param property3},{@param property4}, {@param property5}, {@param property6},
+     *         {@param property7}, and {@param property8} by {@param function}.
+     */
+    public static <A, B, C, D, E, F, G, H, V> MappedProperty<V> map(String name,
+                                                                    Property<A> property1,
+                                                                    Property<B> property2,
+                                                                    Property<C> property3,
+                                                                    Property<D> property4,
+                                                                    Property<E> property5,
+                                                                    Property<F> property6,
+                                                                    Property<G> property7,
+                                                                    Property<H> property8,
+                                                                    EightFunction<A, B, C, D, E, F, G, H, V> function) {
+
+        return MappedProperty.map(
+                name, property1, property2, property3, property4,
+                property5, property6, property7, property8, function
+        );
+    }
+
+    /**
+     * @return A Property whose value is mapped from {@param property1}, {@param property2},
+     *          {@param property3},{@param property4}, {@param property5}, {@param property6},
+     *         {@param property7}, {@param property8}, and {@param property9} by {@param function}.
+     */
+    public static <A, B, C, D, E, F, G, H, I, V> MappedProperty<V> map(String name,
+                                                                       Property<A> property1,
+                                                                       Property<B> property2,
+                                                                       Property<C> property3,
+                                                                       Property<D> property4,
+                                                                       Property<E> property5,
+                                                                       Property<F> property6,
+                                                                       Property<G> property7,
+                                                                       Property<H> property8,
+                                                                       Property<I> property9,
+                                                                       NineFunction<A, B, C, D, E, F, G, H, I, V> function) {
+
+        return MappedProperty.map(
+                name, property1, property2, property3, property4, property5,
+                property6, property7, property8, property9, function
+        );
+    }
+
+    /**
+     * @return A Property whose value is mapped from {@param property1}, {@param property2},
+     *          {@param property3},{@param property4}, {@param property5}, {@param property6},
+     *         {@param property7}, {@param property8}, and {@param property9} by {@param function}.
+     */
+    public static <A, B, C, D, E, F, G, H, I, J, V> MappedProperty<V> map(String name,
+                                                                          Property<A> property1,
+                                                                          Property<B> property2,
+                                                                          Property<C> property3,
+                                                                          Property<D> property4,
+                                                                          Property<E> property5,
+                                                                          Property<F> property6,
+                                                                          Property<G> property7,
+                                                                          Property<H> property8,
+                                                                          Property<I> property9,
+                                                                          Property<J> property10,
+                                                                          TenFunction<A, B, C, D, E, F, G, H, I, J, V> function) {
+
+        return MappedProperty.map(
+                name, property1, property2, property3, property4, property5,
+                property6, property7, property8, property9, property10, function
+        );
     }
 
     /**

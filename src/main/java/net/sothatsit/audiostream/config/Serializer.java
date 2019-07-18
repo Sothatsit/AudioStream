@@ -2,7 +2,7 @@ package net.sothatsit.audiostream.config;
 
 import com.google.gson.JsonElement;
 import com.google.gson.JsonPrimitive;
-import net.sothatsit.property.Unchecked;
+import net.sothatsit.function.Unchecked;
 
 /**
  * Serializes values of the given type to/from serialized types.

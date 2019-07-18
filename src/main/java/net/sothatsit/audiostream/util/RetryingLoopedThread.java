@@ -1,5 +1,7 @@
 package net.sothatsit.audiostream.util;
 
+import net.sothatsit.property.Property;
+
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 
@@ -9,13 +11,6 @@ import java.util.function.Consumer;
  * @author Paddy Lamont
  */
 public class RetryingLoopedThread extends LoopedThread {
-
-    /**
-     * The number of milliseconds to wait in between reporting
-     * repeated exceptions from a RetryingLoopedThread. The total
-     * time waited will double each time the same exception is reported.
-     */
-    private static final long INITIAL_IGNORE_REPEATED_EXCEPTION_MS = 10 * 1000;
 
     private final ExceptionMuffler exceptionMuffler = new ExceptionMuffler();
 
@@ -31,39 +26,26 @@ public class RetryingLoopedThread extends LoopedThread {
         super(name, task, delay, daemon);
     }
 
-    public RetryingLoopedThread(String name, Consumer<AtomicBoolean> task) {
+    public RetryingLoopedThread(String name, Consumer<Property<Boolean>> task) {
         super(name, task);
     }
 
-    public RetryingLoopedThread(String name, Consumer<AtomicBoolean> task, long delay) {
+    public RetryingLoopedThread(String name, Consumer<Property<Boolean>> task, long delay) {
         super(name, task, delay);
     }
 
-    public RetryingLoopedThread(String name, Consumer<AtomicBoolean> task, long delay, boolean daemon) {
+    public RetryingLoopedThread(String name, Consumer<Property<Boolean>> task, long delay, boolean daemon) {
         super(name, task, delay, daemon);
     }
 
     @Override
-    protected boolean runTask() {
-        try {
-            task.accept(enabled);
-            exception = null;
-            return true;
-        } catch (Exception e) {
-            return reportException(e);
-        }
-    }
-
-    @Override
     protected boolean reportException(Exception exception) {
-        this.exception = exception;
-
         ExceptionMuffler.Response response = exceptionMuffler.reportException(exception);
 
         if (response.muffled)
             return true;
 
-        if (response.repeats <= 0) {
+        if (response.repeats == 0) {
             super.reportException(exception);
             return true;
         }

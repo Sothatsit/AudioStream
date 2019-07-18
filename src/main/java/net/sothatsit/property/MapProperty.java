@@ -1,5 +1,7 @@
 package net.sothatsit.property;
 
+import net.sothatsit.function.Unchecked;
+
 import javax.swing.event.ChangeEvent;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;

@@ -1,5 +1,7 @@
 package net.sothatsit.property;
 
+import net.sothatsit.property.event.ChangeListenerProperties;
+
 import javax.swing.event.ChangeListener;
 import java.util.function.Consumer;
 
@@ -14,21 +16,20 @@ public class Attribute<V> implements Property<V> {
     private final Property<Property<V>> valueProperty;
     private final Property<V> value;
 
-    private Attribute(String name, V defaultValue, boolean nullable) {
+    public Attribute(String name, V defaultValue, boolean nullable) {
         if (name == null)
             throw new IllegalArgumentException("name cannot be null");
         if (!nullable && defaultValue == null)
             throw new IllegalArgumentException("defaultValue cannot be null if attribute is not nullable");
 
         this.name = name;
+        this.valueProperty = Property.create(name + "Property");
 
         if (nullable) {
-            final Property<V> defaultConstant = Property.constant(name + "Default", defaultValue);
+            Property<V> defaultConstant = Property.constant(name + "Default", defaultValue);
 
-            this.valueProperty = Property.<Property<V>> create(name + "Property").nonNull(defaultConstant);
-            this.value = Property.flatMap(name, valueProperty);
+            this.value = Property.flatMap(name, valueProperty.nonNull(defaultConstant));
         } else {
-            this.valueProperty = Property.create(name + "Property");
             this.value = Property.flatMap(name, valueProperty).nonNull(defaultValue);
         }
     }
@@ -59,6 +60,10 @@ public class Attribute<V> implements Property<V> {
     @Override
     public void removeChangeListener(ChangeListener listener) {
         value.removeChangeListener(listener);
+    }
+
+    public static <V> Attribute<V> createNullable(String name) {
+        return createNullable(name, null);
     }
 
     public static <V> Attribute<V> createNullable(String name, V defaultValue) {

@@ -3,7 +3,6 @@ package net.sothatsit.audiostream.audio;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonPrimitive;
 import net.sothatsit.audiostream.config.Serializer;
-import net.sothatsit.property.Either;
 
 import javax.sound.sampled.*;
 import java.lang.reflect.Field;
@@ -185,7 +184,7 @@ public class AudioUtils {
     }
 
     /**
-     * @return Whether {@param audioFormat} is supported by {@param mixerInfo}.
+     * @return Whether {@param format} is supported by {@param mixerInfo}.
      */
     public static boolean isAudioFormatSupported(AudioType audioType, Mixer.Info mixerInfo, AudioFormat format) {
         if (mixerInfo == null || format == null)

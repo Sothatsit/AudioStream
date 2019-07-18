@@ -1,5 +1,7 @@
 package net.sothatsit.property;
 
+import net.sothatsit.property.event.ChangeEventSource;
+
 /**
  * A holder that stores a value, and notifies listeners whenever this value is changed.
  *

@@ -1,20 +1,19 @@
 package net.sothatsit.audiostream;
 
-import net.sothatsit.audiostream.client.Client;
-import net.sothatsit.audiostream.client.RemoteAudioServerIndex;
-import net.sothatsit.audiostream.gui.AudioStreamWindow;
-import net.sothatsit.audiostream.gui.AudioStreamTrayIcon;
-import net.sothatsit.audiostream.server.Server;
+import net.sothatsit.audiostream.model.AudioStreamModel;
+import net.sothatsit.audiostream.util.RemovableListener;
+import net.sothatsit.audiostream.view.AudioStreamWindow;
+import net.sothatsit.audiostream.view.AudioStreamTrayIcon;
 import net.sothatsit.audiostream.util.Apple;
 
 import java.awt.*;
-import java.util.List;
+import java.net.InetSocketAddress;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 
 /**
- * Stores information about the program.
+ * Manages the whole AudioStream application.
  *
  * @author Paddy Lamont
  */
@@ -27,6 +26,7 @@ public class AudioStream {
 
     public static InetAddress MULTICAST_ADDRESS;
     public static int MULTICAST_PORT = 5647;
+    public static InetSocketAddress MULTICAST_SOCKET_ADDRESS;
     public static String AUDIOSTREAM_PREFIX = "AudioStream";
     static {
         try {
@@ -34,6 +34,8 @@ public class AudioStream {
         } catch (UnknownHostException e) {
             throw new RuntimeException(e);
         }
+
+        MULTICAST_SOCKET_ADDRESS = new InetSocketAddress(MULTICAST_ADDRESS, MULTICAST_PORT);
     }
 
     /**
@@ -45,21 +47,21 @@ public class AudioStream {
     public static final int DEFAULT_BUFFER_SIZE = 1024 * 12;
     public static final double DEFAULT_REPORT_INTERVAL_SECS = 0.5;
 
-
-    private final RemoteAudioServerIndex serverIndex;
+    private final AudioStreamModel model;
     private final AudioStreamWindow gui;
     private final AudioStreamTrayIcon trayIcon;
+
+    private boolean running = false;
+    private RemovableListener dockListener;
 
     public AudioStream() {
         if (Apple.isDockIconAvailable()) {
             Apple.setDockIcon(AudioStreamIcons.AUDIO_STREAM_DOCK_ICON);
         }
 
-        this.serverIndex = new RemoteAudioServerIndex(this);
-        this.gui = new AudioStreamWindow(serverIndex);
-        this.trayIcon = new AudioStreamTrayIcon(this);
-
-        serverIndex.setEncryption(gui.getEncryption());
+        this.model = new AudioStreamModel();
+        this.gui = new AudioStreamWindow(model);
+        this.trayIcon = new AudioStreamTrayIcon(model);
 
         MenuItem openItem = new MenuItem("Open Window");
         openItem.addActionListener(e -> gui.show());
@@ -71,24 +73,11 @@ public class AudioStream {
         trayIcon.addPopupMenuItem(quitItem);
     }
 
-    public Server getServer() {
-        return gui.getServer();
-    }
+    public synchronized void start() throws IOException {
+        if (running)
+            throw new IllegalStateException("Already running");
 
-    public boolean isServerRunning() {
-        return gui.isServerRunning();
-    }
-
-    public List<Client> getClients() {
-        return gui.getClients();
-    }
-
-    public boolean isClientRunning() {
-        return gui.isClientRunning();
-    }
-
-    public void start() throws IOException {
-        serverIndex.start();
+        running = true;
 
         trayIcon.addToSystemTray();
         trayIcon.scheduleThread();
@@ -96,7 +85,26 @@ public class AudioStream {
         gui.show();
 
         if (Apple.isDockListenerAvailable()) {
-            Apple.addDockListener(gui::show);
+            dockListener = Apple.addDockListener(gui::show);
+        }
+    }
+
+    public synchronized void stop() throws IOException {
+        if (!running)
+            throw new IllegalStateException("Not running");
+
+        running = false;
+
+        model.stop();
+
+        trayIcon.removeFromSystemTray();
+        trayIcon.stopThread();
+
+        gui.close();
+
+        if (dockListener != null) {
+            dockListener.remove();
+            dockListener = null;
         }
     }
 }

@@ -20,10 +20,10 @@ import java.util.Arrays;
  *  1. Generate random salt
  *  2. Generate key using salt and secret
  *  3. Encrypt message using generated key
- *  4. Transmit salt and encrypted message together
+ *  4. Transmit salt and isEncrypted message together
  *
  * Decryption:
- *  1. Receive salt and encrypted message
+ *  1. Receive salt and isEncrypted message
  *  2. Generate key using received salt and secret
  *  3. Decrypt message using generated key
  *
@@ -49,7 +49,7 @@ public class Encryption {
     }
 
     /**
-     * @return {@param message} encrypted using the secret.
+     * @return {@param message} isEncrypted using the secret.
      */
     public byte[] encrypt(byte[] message) {
         // Generate salt
@@ -65,7 +65,7 @@ public class Encryption {
             throw new RuntimeException("Exception creating encryption key and AesGcmJce", e);
         }
 
-        // Encrypt message, and return salt and encrypted concatenated together
+        // Encrypt message, and return salt and isEncrypted concatenated together
         try {
             byte[] encryptedMessage = encryption.encrypt(message, salt);
             return concatenate(salt, encryptedMessage);
@@ -86,7 +86,7 @@ public class Encryption {
     }
 
     /**
-     * @return {@param encrypted} decrypted using the secret.
+     * @return {@param isEncrypted} decrypted using the secret.
      */
     public byte[] decrypt(byte[] encrypted) {
         try {

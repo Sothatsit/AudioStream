@@ -1,6 +1,7 @@
 package net.sothatsit.audiostream.util;
 
-import java.util.concurrent.atomic.AtomicBoolean;
+import net.sothatsit.property.Property;
+
 import java.util.function.Consumer;
 
 /**
@@ -11,13 +12,14 @@ import java.util.function.Consumer;
 public class LoopedThread {
 
     protected final String name;
-    protected final Consumer<AtomicBoolean> task;
+    protected final Consumer<Property<Boolean>> task;
     private final long delay;
     private final boolean daemon;
+    private InterruptStrategy interruptStrategy;
 
-    protected final AtomicBoolean enabled;
+    private final Property<Boolean> enabled;
+    private final ServiceState.StateProperty state;
     private Thread thread;
-    protected Exception exception;
 
     public LoopedThread(String name, Runnable task) {
         this(name, task, 0);
@@ -31,15 +33,15 @@ public class LoopedThread {
         this(name, running -> task.run(), delay, daemon);
     }
 
-    public LoopedThread(String name, Consumer<AtomicBoolean> task) {
+    public LoopedThread(String name, Consumer<Property<Boolean>> task) {
         this(name, task, 0);
     }
 
-    public LoopedThread(String name, Consumer<AtomicBoolean> task, long delay) {
+    public LoopedThread(String name, Consumer<Property<Boolean>> task, long delay) {
         this(name, task, delay, true);
     }
 
-    public LoopedThread(String name, Consumer<AtomicBoolean> task, long delay, boolean daemon) {
+    public LoopedThread(String name, Consumer<Property<Boolean>> task, long delay, boolean daemon) {
         if (task == null)
             throw new IllegalArgumentException("task cannot be null");
         if (delay < 0)
@@ -49,32 +51,21 @@ public class LoopedThread {
         this.task = task;
         this.delay = delay;
         this.daemon = daemon;
-        this.enabled = new AtomicBoolean(false);
+        this.interruptStrategy = InterruptStrategy.THROW;
+        this.enabled = Property.create("enabled", false);
+        this.state = new ServiceState.StateProperty("state");
     }
 
-    /**
-     * The state of this thread.
-     */
-    public enum ThreadState {
-        STOPPED,
-        RUNNING,
-        ERRORED
+    public Property<ServiceState> getState() {
+        return state.readOnly();
     }
 
-    public ThreadState getState() {
-        if (exception != null)
-            return ThreadState.ERRORED;
-        if (thread == null || !thread.isAlive())
-            return ThreadState.STOPPED;
-        return ThreadState.RUNNING;
+    public InterruptStrategy getInterruptStrategy() {
+        return interruptStrategy;
     }
 
-    public boolean isRunning() {
-        return getState() == ThreadState.RUNNING;
-    }
-
-    public Exception getException() {
-        return exception;
+    public void setInterruptStrategy(InterruptStrategy interruptStrategy) {
+        this.interruptStrategy = interruptStrategy;
     }
 
     /**
@@ -82,89 +73,68 @@ public class LoopedThread {
      */
     public synchronized void start() {
         if (thread != null && thread.isAlive())
-            throw new IllegalStateException("LoopedThread is already running");
+            throw new IllegalStateException("LoopedThread is already alive");
+
+        state.setToStarting("Starting thread", false);
 
         thread = new Thread(this::runLoop);
         thread.setDaemon(daemon);
 
         enabled.set(true);
-        exception = null;
         thread.start();
     }
 
     /**
-     * Alias for stopGracefully(interruptTimeout, forcefulTimeout) with
-     * defaults of 3 seconds for the interrupt and forceful timeouts.
-     */
-    public void stopGracefully() {
-        stopGracefully(3 * 1000, 3 * 1000);
-    }
-
-    /**
-     * Gracefully stop the given thread, first disabling it and waiting
-     * interruptTimeout milliseconds for it to stop on its own.
+     * Will stop this LoopedThread the next time an iteration is completed.
      *
-     * If interruptTimeout milliseconds pass without the thread stopping,
-     * the thread will then be interrupted and forcefulTimeout milliseconds
-     * will be waited before forcefully stopping the thread.
+     * Could potentially never stop the LoopedThread if this thread's task never finishes.
      */
-    public synchronized void stopGracefully(long interruptTimeout, long forcefulTimeout) {
+    public void stopNextLoop() {
         if (thread == null || !thread.isAlive())
-            return;
+            throw new IllegalStateException("LoopedThread is not alive");
 
+        state.setToStopping("Stopping next loop");
         enabled.set(false);
-
-        long start = System.currentTimeMillis();
-
-        try {
-            thread.join(interruptTimeout);
-        } catch (InterruptedException e) {
-            throw new RuntimeException("Interrupted waiting for thread to finish", e);
-        } finally {
-            if (thread.isAlive()) {
-                if (interruptTimeout > 0 && System.currentTimeMillis() - start >= interruptTimeout) {
-                    System.err.println("Forcefully stopping thread " + this + " as interrupt timeout was exceeded");
-                } else {
-                    System.err.println("Forcefully stopping thread " + this + " due to exception");
-                }
-
-                stopForcefully(forcefulTimeout);
-            }
-
-            thread = null;
-        }
     }
 
     /**
      * Alias for stopForcefully(forcefulTimeout) with a default 3 second timeout.
      */
-    public void stopForcefully() {
-        stopForcefully(3 * 1000);
+    public void stop() {
+        stop(3 * 1000);
     }
 
     /**
      * Interrupt the thread and wait forcefulTimeout milliseconds for
      * it to terminate before forcefully stopping the thread.
      */
-    public synchronized void stopForcefully(long forcefulTimeout) {
+    @SuppressWarnings("deprecation")
+    public synchronized void stop(long timeout) {
         if (thread == null || !thread.isAlive())
             return;
+
+        state.setToStopping("Stopping within " + timeout + " ms");
+        enabled.set(false);
 
         long start = System.currentTimeMillis();
 
         try {
             thread.interrupt();
-            thread.join(forcefulTimeout);
+            thread.join(timeout);
         } catch (InterruptedException e) {
-            throw new RuntimeException("Interrupted waiting for LoopedThread " + name + "to finish", e);
+            throw new RuntimeException("Interrupted waiting for LoopedThread " + name + " to finish", e);
         } finally {
             if (thread.isAlive()) {
-                if (forcefulTimeout > 0 && System.currentTimeMillis() - start >= forcefulTimeout) {
-                    System.err.println("Terminating LoopedThread " + name + " as forceful timeout was exceeded");
+                String error;
+
+                // The 15 ms is used as an epsilon due to the inaccuracy of currentTimeMillis
+                if (timeout > 0 && System.currentTimeMillis() - start >= timeout - 15) {
+                    error = "Forcefully terminating LoopedThread " + name + " as forceful timeout was exceeded";
                 } else {
-                    System.err.println("Terminating LoopedThread " + name + " due to exception");
+                    error = "Forcefully terminating LoopedThread " + name + " due to exception";
                 }
 
+                new RuntimeException(error).printStackTrace();
                 thread.stop();
             }
 
@@ -172,33 +142,96 @@ public class LoopedThread {
         }
     }
 
+    /**
+     * Trigger an interrupt in this thread.
+     */
+    public void interrupt() {
+        if (thread == null || !thread.isAlive())
+            throw new IllegalStateException("LoopedThread is not running");
+
+        thread.interrupt();
+    }
+
+    /**
+     * Trigger an interrupt in this thread if it is running.
+     */
+    public void interruptIfRunning() {
+        if (thread == null || !thread.isAlive())
+            return;
+
+        thread.interrupt();
+    }
+
+    /**
+     * Continuously repeat the running of the task.
+     */
     private void runLoop() {
-        while (enabled.get()) {
-            if (!runTask())
-                break;
+        try {
+            state.setToRunning("Running task loop");
+            while (enabled.get()) {
+                if (!runTask() || !enabled.get())
+                    break;
 
-            if (!enabled.get())
-                break;
-            if (delay <= 0)
-                continue;
+                sleepForDelay();
+            }
+        } catch (Throwable error) {
+            state.setToStopping("Error running task loop: " + error.getMessage(), error);
+            throw error;
+        } finally {
+            enabled.set(false);
+            state.setToStopped("Stopped");
+        }
+    }
 
+    /**
+     * Sleep for the delay between task runs.
+     */
+    private void sleepForDelay() {
+        if (delay <= 0)
+            return;
+
+        long sleepUntil = System.nanoTime() + delay * 1000000;
+
+        sleepLoop: while (System.nanoTime() < sleepUntil) {
             try {
                 Thread.sleep(delay);
             } catch (InterruptedException e) {
-                System.err.println("Interrupted executing LoopedThread " + name);
+                switch (interruptStrategy) {
+                    case SKIP_WAIT:
+                        break sleepLoop;
+
+                    case REPORT:
+                        System.err.println("Interrupted between executions of LoopedThread " + name);
+                        break;
+
+                    case THROW:
+                        throw new RuntimeException("Interrupted between executions of LoopedThread " + name, e);
+
+                    default:
+                        throw new IllegalStateException("Unknown InterruptStrategy " + interruptStrategy);
+                }
             }
         }
     }
 
     /**
-     * @return Whether to continue running despite the exception.
+     * @return Whether to continue running.
      */
-    protected boolean runTask() {
+    private boolean runTask() {
         try {
-            task.accept(enabled);
+            task.accept(enabled.readOnly());
+            state.clearRunningError();
             return true;
-        } catch (Exception e) {
-            return reportException(e);
+        } catch (Exception exception) {
+            boolean continueRunning = reportException(exception);
+
+            if (continueRunning) {
+                state.setToRunning("Error running task: " + exception.getMessage(), false, exception);
+            } else {
+                state.setToStopping("Error running task: " + exception.getMessage(), false, exception);
+            }
+
+            return continueRunning;
         }
     }
 
@@ -206,8 +239,27 @@ public class LoopedThread {
      * @return Whether to continue running despite the exception.
      */
     protected boolean reportException(Exception exception) {
-        this.exception = exception;
-        new RuntimeException("Exception in LoopedThread " + name, exception).printStackTrace();
+        new IllegalStateException("Exception in LoopedThread " + name, exception).printStackTrace();
         return false;
+    }
+
+    /**
+     * Strategy to take when thread is interrupted.
+     */
+    public enum InterruptStrategy {
+        /**
+         * Execute the next iteration of the looped thread straight away.
+         */
+        SKIP_WAIT,
+
+        /**
+         * Report the interrupt and then continue on as normal.
+         */
+        REPORT,
+
+        /**
+         * Throw the interrupt exception further up the chain.
+         */
+        THROW
     }
 }

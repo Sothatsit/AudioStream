@@ -36,18 +36,22 @@ public class ModifiableProperty<T> extends AbstractProperty<T> {
 
     @Override
     public void set(T value) {
-        ChangeEvent event;
+        ChangeEvent event = null;
 
         synchronized (lock) {
             if (value == this.value)
                 return;
 
-            event = new PropertyChangeEvent<>(this, this.value, value);
+            if (!Objects.equals(this.value, value)) {
+                event = new PropertyChangeEvent<>(this, this.value, value);
+            }
 
             this.value = value;
         }
 
-        fireChangeEvent(event);
+        if (event != null) {
+            fireChangeEvent(event);
+        }
     }
 
     @Override

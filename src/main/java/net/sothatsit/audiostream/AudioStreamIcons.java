@@ -17,9 +17,15 @@ public class AudioStreamIcons {
     public static final ImageIcon SERVER_STATUS_ERRORED_ICON;
     public static final ImageIcon SERVER_STATUS_CONNECTING_ICON;
     public static final ImageIcon SERVER_STATUS_RUNNING_ICON;
+    public static final ImageIcon UNENCRYPTED_ICON;
+    public static final ImageIcon ENCRYPTED_ICON;
+    public static final ImageIcon UNKNOWN_ENCRYPTION_ICON;
 
     static {
         AUDIO_STREAM_DOCK_ICON = readResourceImage("/icon.png");
+        UNENCRYPTED_ICON = readResourceIcon("/unencrypted.png");
+        ENCRYPTED_ICON = readResourceIcon("/encrypted.png");
+        UNKNOWN_ENCRYPTION_ICON = readResourceIcon("/encryption_unlockable.png");
 
         int serverStatusIconSize = 12;
         SERVER_STATUS_ERRORED_ICON = createServerStatusIcon(Color.RED, serverStatusIconSize);
@@ -29,6 +35,10 @@ public class AudioStreamIcons {
 
     private AudioStreamIcons() {
         // Not intended to be constructed
+    }
+
+    private static ImageIcon readResourceIcon(String file) {
+        return new ImageIcon(readResourceImage(file));
     }
 
     private static BufferedImage readResourceImage(String file) {

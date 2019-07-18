@@ -7,6 +7,8 @@ package net.sothatsit.audiostream.encryption;
  */
 public class EncryptionSettings {
 
+    public static EncryptionSettings NO_ENCRYPTION = new EncryptionSettings(false, "");
+
     public final boolean doEncrypt;
     public final String secret;
 
