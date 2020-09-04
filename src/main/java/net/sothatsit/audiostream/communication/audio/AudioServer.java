@@ -6,6 +6,7 @@ import net.sothatsit.audiostream.util.ServiceState;
 import net.sothatsit.property.awt.GuiUtils;
 import net.sothatsit.property.Property;
 
+import javax.sound.sampled.AudioFormat;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -75,6 +76,10 @@ public class AudioServer {
 
     private Socket acceptSocket() throws IOException {
         try {
+            // Can happen when the server is closed.
+            if (serverSocket == null)
+                return null;
+
             return serverSocket.accept();
         } catch (SocketException exception) {
             if ("Socket closed".equals(exception.getMessage()))
@@ -137,5 +142,16 @@ public class AudioServer {
 
             killServerSocket();
         }
+    }
+
+    /**
+     * @return the number of buffer bytes required to have a buffer size of {@param bufferSizeMS}
+     *         milliseconds for the given audio format {@param format}.
+     */
+    public static int getBufferSizeBytes(AudioFormat format, int bufferSizeMS) {
+        int channels = format.getChannels();
+        int sampleBits = format.getSampleSizeInBits();
+        float sampleRate = format.getSampleRate();
+        return (int) (channels * sampleBits / 8.0d * sampleRate * bufferSizeMS / 1000.0d);
     }
 }

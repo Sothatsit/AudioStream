@@ -46,7 +46,10 @@ public class AudioClient {
 
         this.state = new ServiceState.StateProperty("state");
 
-        ChangeListener restartClient = event -> thread.interruptIfRunning();
+        ChangeListener restartClient = event -> {
+            stop();
+            start();
+        };
         serverDetails.addChangeListener(restartClient);
         settings.addChangeListener(restartClient);
     }
@@ -119,11 +122,13 @@ public class AudioClient {
 
         Mixer.Info outputMixer = settings.mixer;
         AudioFormat audioFormat = serverDetails.audioServerDetails.format;
-        int bufferBytes = settings.bufferBytes;
+        int bufferDelayBytes = AudioServer.getBufferSizeBytes(audioFormat, settings.bufferDelayMS);
+        int bufferBytes = AudioServer.getBufferSizeBytes(audioFormat, settings.bufferSizeMS);
+
         InetSocketAddress address = serverDetails.audioServerDetails.address;
 
         StreamMonitor monitor = settings.createStreamMonitor(audioFormat);
-        AudioWriter audioWriter = new AudioWriter(outputMixer, audioFormat, bufferBytes);
+        AudioWriter audioWriter = new AudioWriter(outputMixer, audioFormat, bufferDelayBytes, bufferBytes);
 
         Socket socket = null;
         String exitStatus = "Disconnected";
@@ -140,7 +145,7 @@ public class AudioClient {
             state.setToRunning("Connected");
 
             // Receive and play audio
-            while (running.get() && !Thread.interrupted()) {
+            while (running.get()) {
                 byte[] packet = stream.readPacket();
 
                 if (encryption != null) {

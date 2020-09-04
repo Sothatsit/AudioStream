@@ -54,9 +54,11 @@ public class RemoteServer {
     }
 
     public boolean is(InetSocketAddress address) {
-        if (this.controlAddress.equals(address))
+        if (controlAddress.equals(address))
             return true;
-        return isAddressLocalhost(this.controlAddress) && isAddressLocalhost(address);
+        if (controlAddress.getPort() != address.getPort())
+            return false;
+        return isAddressLocalhost(controlAddress) && isAddressLocalhost(address);
     }
 
     public boolean is(InetAddress address, int port) {

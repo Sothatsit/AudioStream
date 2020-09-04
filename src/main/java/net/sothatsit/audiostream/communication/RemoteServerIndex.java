@@ -1,6 +1,5 @@
 package net.sothatsit.audiostream.communication;
 
-import net.sothatsit.audiostream.AudioStream;
 import net.sothatsit.audiostream.model.RemoteServerDetails;
 import net.sothatsit.audiostream.util.LoopedThread;
 import net.sothatsit.audiostream.util.RetryingLoopedThread;
@@ -21,7 +20,8 @@ public class RemoteServerIndex {
     //        while the remote server's control address changes. This may cause issues if an entry is removed
     //        from this index, but we are still connected to it for audio.
 
-    private static final int UPDATE_DELAY_MS = 3 * 1000;
+    private static final int PURGE_DEAD_DELAY_MS = 3 * 1000;
+    private static final long SERVER_NO_RESPONSE_PURGE_MS = 6 * 1000;
 
     private final Property<ControlServer> controlServer;
     private final LoopedThread updateThread;
@@ -31,18 +31,19 @@ public class RemoteServerIndex {
 
     public RemoteServerIndex(Property<ControlServer> controlServer) {
         this.controlServer = controlServer;
-        this.updateThread = new RetryingLoopedThread("updateThread", this::purgeDeadConnections, UPDATE_DELAY_MS);
+        // TODO : Purging dead connections should be done as soon as their TCPConnection state changes
+        this.updateThread = new RetryingLoopedThread("updateThread", this::purgeDeadConnections, PURGE_DEAD_DELAY_MS);
         this.foundServers = new ArrayList<>();
         this.manualServers = new ArrayList<>();
 
         controlServer.addValueListener(this::updateControlServer);
     }
 
-    public void start() throws IOException {
+    public void start() {
         updateThread.start();
     }
 
-    public void stop() throws IOException {
+    public void stop() {
         updateThread.stop();
     }
 
@@ -134,8 +135,9 @@ public class RemoteServerIndex {
         while (servers.hasNext()) {
             RemoteServer server = servers.next();
 
-            if (server.getTimeSinceUpdateMS() >= AudioStream.SERVER_NO_RESPONSE_PURGE_MS) {
+            if (server.getTimeSinceUpdateMS() >= SERVER_NO_RESPONSE_PURGE_MS) {
                 servers.remove();
+                System.err.println("Purge " + server);
             }
         }
     }

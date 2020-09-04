@@ -8,6 +8,7 @@ import net.sothatsit.audiostream.communication.audio.AudioClient;
 import net.sothatsit.audiostream.communication.audio.AudioClientManager;
 import net.sothatsit.audiostream.communication.audio.AudioClientSettings;
 import net.sothatsit.audiostream.model.AudioStreamModel;
+import net.sothatsit.audiostream.model.RemoteServerDetails;
 import net.sothatsit.property.Property;
 import net.sothatsit.function.Either;
 import net.sothatsit.property.awt.*;
@@ -21,6 +22,7 @@ import java.io.IOException;
 import java.net.*;
 import java.util.*;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * A GUI for configuring a Client.
@@ -37,6 +39,7 @@ public class ClientConfigurationPanel extends PropertyPanel {
     private final AudioClientManager clientManager;
 
     private final AudioProperties audioProperties;
+    private final Property<Integer> bufferDelayMS;
     private final Property<Either<AudioClientSettings, String>> clientSettings;
 
     private final JList<RemoteServer> availableServersList;
@@ -58,15 +61,24 @@ public class ClientConfigurationPanel extends PropertyPanel {
         this.clientManager = model.audioClientManager;
 
         this.audioProperties = new AudioProperties();
+
+        Property<String> bufferDelayString = Property.create("bufferDelayString", "0");
+        Property<Integer> bufferDelayMS = bufferDelayString.map(
+                "bufferDelayMS", ClientConfigurationPanel::parseBufferDelay
+        );
+        Property<Boolean> isBufferDelayValid = bufferDelayMS.isNotNull("isBufferDelayValid");
+
+        this.bufferDelayMS = Property.createNonNull("bufferDelayMS", 0);
         this.clientSettings = Property.map(
-                "clientSettings", audioProperties.mixer, audioProperties.bufferSize, model.encryption,
-                (mixer, bufferBytes, encryption) -> {
+                "clientSettings", audioProperties.mixer, audioProperties.bufferSizeMS, bufferDelayMS, model.encryption,
+                (mixer, bufferSizeMS, bufferDelayMSValue, encryption) -> {
                     if (mixer == null)
                         return Either.right("Please select a mixer");
 
                     AudioClientSettings settings = new AudioClientSettings(
                             mixer,
-                            (bufferBytes != null ? bufferBytes : AudioStream.DEFAULT_BUFFER_SIZE),
+                            bufferSizeMS,
+                            bufferDelayMSValue == null ? 0 : bufferDelayMSValue,
                             AudioStream.DEFAULT_REPORT_INTERVAL_SECS,
                             encryption
                     );
@@ -95,6 +107,20 @@ public class ClientConfigurationPanel extends PropertyPanel {
 
             add(audioPropertiesPanel, constraints.build(4));
             constraints.nextRow();
+
+            { // Audio Delay
+                PropertyLabel bufferDelayLabel = new PropertyLabel("Buffer Delay (ms)");
+                PropertyTextField bufferDelayField = new PropertyTextField(bufferDelayString);
+
+                bufferDelayLabel.setForeground(
+                        Property.ternary("bufferDelay_fg", isBufferDelayValid, Color.BLACK, Color.RED)
+                );
+                bufferDelayField.setEnabled(isEnabled());
+
+                add(bufferDelayLabel, constraints.weightX(0).build());
+                add(bufferDelayField, constraints.weightX(1.0).build());
+                constraints.nextRow();
+            }
         }
 
         { // Connections
@@ -117,8 +143,6 @@ public class ClientConfigurationPanel extends PropertyPanel {
                 availableServersList.setVisibleRowCount(8);
                 availableServersList.setCellRenderer(new RemoteAudioServerListRenderer(model.encryption));
                 availableServersList.setModel(availableServers);
-
-
 
                 connectedServers = new BasicListModel<>();
                 connectedServersList = new JList<>();
@@ -314,6 +338,8 @@ public class ClientConfigurationPanel extends PropertyPanel {
         clientViewWindows.values().forEach(ClientViewDialog::update);
     }
 
+    // TODO : This is inefficient, and could take a while to update
+    //        Should be using Property listeners
     public void update() {
         updateClientViewWindows();
 
@@ -331,14 +357,19 @@ public class ClientConfigurationPanel extends PropertyPanel {
             removeAction.setEnabled(false);
         }
 
-        List<RemoteServer> disconnectedServers = new ArrayList<>(remoteServerIndex.getServers());
+        List<RemoteServer> disconnectedServers = remoteServerIndex.getServers()
+                .stream()
+                .filter(server -> {
+                    RemoteServerDetails details = server.getDetails().get();
+                    return details != null && details.hasAudioServer();
+                })
+                .collect(Collectors.toList());
+        disconnectedServers = new ArrayList<>(disconnectedServers);
         disconnectedServers.removeAll(clientManager.getServers());
 
         availableServers.replaceAll(disconnectedServers);
         connectedServers.replaceAll(clientManager.getClients());
 
-        // TODO : This is inefficient, and could take a while to update
-        //        Should be using Property listeners
         availableServers.fireContentsChanged();
         connectedServers.fireContentsChanged();
     }
@@ -363,5 +394,17 @@ public class ClientConfigurationPanel extends PropertyPanel {
 
     public static String audioFormatToString(AudioFormat format) {
         return format.toString();
+    }
+
+    /**
+     * @return {@param bufferDelayString} converted to an Integer, or null if invalid.
+     */
+    private static Integer parseBufferDelay(String bufferDelayString) {
+        try {
+            int delay = Integer.parseInt(bufferDelayString);
+            return delay >= 0 && delay < AudioStream.MAX_BUFFER_DELAY_MS ? delay : null;
+        } catch (NumberFormatException e) {
+            return null;
+        }
     }
 }

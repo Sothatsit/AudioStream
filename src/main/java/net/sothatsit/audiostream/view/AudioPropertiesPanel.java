@@ -1,14 +1,12 @@
 package net.sothatsit.audiostream.view;
 
+import net.sothatsit.audiostream.AudioStream;
 import net.sothatsit.audiostream.audio.AudioType;
 import net.sothatsit.audiostream.audio.AudioUtils;
 import net.sothatsit.property.ListProperty;
 import net.sothatsit.property.Property;
 import net.sothatsit.function.Either;
-import net.sothatsit.property.awt.GBCBuilder;
-import net.sothatsit.property.awt.PropertyComboBox;
-import net.sothatsit.property.awt.PropertyLabel;
-import net.sothatsit.property.awt.PropertyPanel;
+import net.sothatsit.property.awt.*;
 
 import javax.sound.sampled.*;
 import javax.swing.*;
@@ -39,6 +37,13 @@ public class AudioPropertiesPanel extends PropertyPanel {
                 properties.mixer, properties.audioFormat,
                 this::isAudioFormatSupported
         );
+
+        Property<String> bufferSizeString = Property.create(
+                "bufferSizeString", properties.bufferSizeMS.get().toString()
+        );
+        Property<Integer> bufferSizeMS = bufferSizeString.map("bufferSizeMS", AudioPropertiesPanel::parseBufferSize);
+        Property<Boolean> isBufferSizeValid = bufferSizeMS.isNotNull("isBufferSizeValid");
+        properties.bufferSizeMS.set(bufferSizeMS);
 
         setLayout(new GridBagLayout());
 
@@ -128,15 +133,16 @@ public class AudioPropertiesPanel extends PropertyPanel {
         }
 
         { // Buffering Configuration
-            PropertyComboBox<Integer> bufferSizeCombo = new PropertyComboBox<>(
-                    new Integer[] {4*1024, 8*1024, 12*1024, 16*1024, 32*1024, 64*1024},
-                    properties.bufferSize,
-                    value -> (value / 1024) + " kB"
-            );
-            bufferSizeCombo.setEnabled(isEnabled());
+            PropertyLabel bufferSizeLabel = new PropertyLabel("Buffer Size (ms)");
+            PropertyTextField bufferSizeField = new PropertyTextField(bufferSizeString);
 
-            add("Buffer Size", constraints.build());
-            add(bufferSizeCombo, constraints.weightX(1.0).build());
+            bufferSizeLabel.setForeground(
+                    Property.ternary("bufferSize_fg", isBufferSizeValid, Color.BLACK, Color.RED)
+            );
+            bufferSizeField.setEnabled(isEnabled());
+
+            add(bufferSizeLabel, constraints.weightX(0).build());
+            add(bufferSizeField, constraints.weightX(1.0).build());
             constraints.nextRow();
         }
 
@@ -167,5 +173,17 @@ public class AudioPropertiesPanel extends PropertyPanel {
             return false;
 
         return AudioUtils.isAudioFormatSupported(audioType, mixerInfo, audioFormatEither.getLeft());
+    }
+
+    /**
+     * @return {@param bufferSizeString} converted to an Integer, or null if invalid.
+     */
+    private static Integer parseBufferSize(String bufferSizeString) {
+        try {
+            int size = Integer.parseInt(bufferSizeString);
+            return size > 0 ? size : null;
+        } catch (NumberFormatException e) {
+            return null;
+        }
     }
 }

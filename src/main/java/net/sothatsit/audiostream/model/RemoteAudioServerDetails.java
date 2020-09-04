@@ -47,6 +47,6 @@ public class RemoteAudioServerDetails {
             return false;
 
         RemoteAudioServerDetails other = (RemoteAudioServerDetails) obj;
-        return Objects.equals(address, other.address) && Objects.equals(format, other.format);
+        return Objects.equals(address, other.address) && format.matches(other.format);
     }
 }

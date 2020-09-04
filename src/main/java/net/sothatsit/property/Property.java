@@ -10,6 +10,12 @@ import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
+// TODO : The idea of identity vs equality should be consistent throughout all the properties.
+//        I think having change events only be thrown on equality changes, yet having the identity
+//        values of the properties updated is the best option.
+//        i.e. If in set(), oldValue.equals(newValue) but oldValue != newValue, then the value of the
+//             property should be changed to newValue, but no event should be thrown.
+
 /**
  * A holder that has a value, and notifies listeners whenever this value is changed.
  *

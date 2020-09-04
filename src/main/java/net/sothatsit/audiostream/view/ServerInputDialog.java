@@ -56,6 +56,9 @@ public class ServerInputDialog extends PropertyDialog {
             PropertyLabel portLabel = new PropertyLabel("Port");
             PropertyTextField portField = new PropertyTextField(portString);
 
+            // TODO : Add an indicator to show that the address is being checked.
+            //        e.g. Spinning icon or orange foreground.
+            //        Necessary because sometimes it can take over a second to update (which can be confusing).
             addressLabel.setForeground(Property.ternary("addressFg", isAddressValid, Color.BLACK, Color.RED));
             portLabel.setForeground(Property.ternary("portFg", isPortValid, Color.BLACK, Color.RED));
 

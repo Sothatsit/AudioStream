@@ -1,14 +1,16 @@
 package net.sothatsit.audiostream.communication.io;
 
+import net.sothatsit.audiostream.util.Exceptions;
 import net.sothatsit.audiostream.util.LoopedThread;
 import net.sothatsit.audiostream.util.ServiceState;
 import net.sothatsit.property.Property;
 
 import java.io.IOException;
-import java.net.DatagramPacket;
-import java.net.InetSocketAddress;
-import java.net.ServerSocket;
-import java.net.Socket;
+import java.net.*;
+import java.nio.channels.ClosedByInterruptException;
+import java.nio.channels.ServerSocketChannel;
+import java.nio.channels.SocketChannel;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Consumer;
@@ -18,7 +20,7 @@ import java.util.function.Consumer;
  *
  * @author Paddy Lamont
  */
-public class TCPServer {
+public class TCPServer implements AutoCloseable {
 
     private final String name;
     private final int port;
@@ -26,12 +28,12 @@ public class TCPServer {
     private final List<Consumer<DatagramPacket>> listeners;
 
     private final List<TCPConnection> connections;
-    private ServerSocket socket;
+    private ServerSocketChannel socket;
 
     public TCPServer(String name, int port) {
         this.name = name;
         this.port = port;
-        this.connectThread = new LoopedThread(name + "-connect-thread", this::receiveConnection);
+        this.connectThread = new LoopedThread(name + "-connectThread", this::receiveConnection);
         this.listeners = new CopyOnWriteArrayList<>();
         this.connections = new CopyOnWriteArrayList<>();
     }
@@ -70,31 +72,31 @@ public class TCPServer {
         if (socket != null)
             throw new IllegalStateException("This server has already started");
 
-        socket = new ServerSocket(port);
+        socket = ServerSocketChannel.open();
+        socket.bind(new InetSocketAddress(port));
         connectThread.start();
     }
 
+    @Override
     public synchronized void close() throws IOException {
         if (socket == null)
             throw new IllegalStateException("This server has is stopped");
 
-        connectThread.stop();
+        List<AutoCloseable> toClose = new ArrayList<>();
 
-        for (TCPConnection connection : connections) {
-            try {
-                connection.close();
-            } catch (IOException exception) {
-                String exceptionString = exception.getClass() + ": " + exception.getMessage();
-                System.err.println("Error closing TCP connection, " + exceptionString);
-            }
-        }
+        toClose.add(connectThread);
+        toClose.addAll(connections);
+        toClose.add(socket);
+
+        Exceptions.closeManyIO(toClose);
+
         connections.clear();
-
-        socket.close();
         socket = null;
     }
 
     private void addConnection(TCPConnection connection) {
+        // TODO : Also listen for the closing of the connection, and when its closed remove it as a connection.
+        //        (Currently it waits for a send to the connection to fail before removing it.)
         connection.addListener(this::propagatePacket);
 
         synchronized (this) {
@@ -102,11 +104,27 @@ public class TCPServer {
         }
     }
 
+    private void closeConnection(TCPConnection connection) {
+        try {
+            connection.close();
+        } catch (IOException exception) {
+            new RuntimeException(
+                    "Exception closing connection to " + connection.getRemoteAddress(),
+                    exception
+            ).printStackTrace();
+        } finally {
+            connections.remove(connection);
+        }
+    }
+
     private void receiveConnection() {
         TCPConnection connection;
         try {
-            Socket newSocket = socket.accept();
+            SocketChannel newSocket = socket.accept();
             connection = new TCPConnection(name, newSocket);
+        } catch (ClosedByInterruptException exception) {
+            // Interrupts are used to stop the multicast receiver thread
+            return;
         } catch (IOException exception) {
             String exceptionString = exception.getClass() + ": " + exception.getMessage();
             System.err.println("Error receiving new TCP connection, " + exceptionString);
@@ -117,7 +135,8 @@ public class TCPServer {
     }
 
     private TCPConnection openNewConnection(InetSocketAddress address) throws IOException {
-        Socket socket = new Socket(address.getAddress(), address.getPort());
+        SocketChannel socket = SocketChannel.open(address);
+
         return new TCPConnection(name, socket);
     }
 
@@ -164,14 +183,23 @@ public class TCPServer {
             }
         }
 
-        if (caughtException != null) {
+        if (caughtException != null)
             throw caughtException;
-        }
     }
 
     public void send(byte[] bytes, InetSocketAddress address) throws IOException {
+        if (bytes == null)
+            throw new IllegalArgumentException("bytes cannot be null");
+        if (address == null)
+            throw new IllegalArgumentException("address cannot be null");
+
         TCPConnection connection = getOrOpenConnection(address);
 
-        connection.send(bytes);
+        try {
+            connection.send(bytes);
+        } catch (IOException exception) {
+            closeConnection(connection);
+            throw exception;
+        }
     }
 }

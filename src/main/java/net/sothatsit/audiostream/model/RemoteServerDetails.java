@@ -29,6 +29,10 @@ public class RemoteServerDetails {
         this.encryptionVerification = encryptionVerification;
     }
 
+    public boolean hasAudioServer() {
+        return audioServerDetails != null;
+    }
+
     public void writeTo(PacketBuilder builder) throws IOException {
         builder.writeInt(controlAddress.getPort());
 

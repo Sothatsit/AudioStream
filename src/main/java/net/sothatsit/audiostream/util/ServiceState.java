@@ -78,7 +78,9 @@ public class ServiceState {
             return false;
 
         ServiceState other = (ServiceState) obj;
-        return Objects.equals(getError(), other.getError());
+        return type == other.type
+                && Objects.equals(status, other.status)
+                && Objects.equals(getError(), other.getError());
     }
 
     /**

@@ -1,5 +1,8 @@
 package net.sothatsit.audiostream.util;
 
+import java.awt.*;
+import java.awt.desktop.AppReopenedListener;
+
 /**
  * Allows easy removal of listeners, which are otherwise difficult to keep track of.
  *
@@ -10,4 +13,10 @@ package net.sothatsit.audiostream.util;
 public interface RemovableListener {
 
     public void remove();
+
+    public static RemovableListener createAppReopenedListener(Runnable runnable) {
+        AppReopenedListener listener = e -> runnable.run();
+        Desktop.getDesktop().addAppEventListener(listener);
+        return () -> Desktop.getDesktop().removeAppEventListener(listener);
+    }
 }

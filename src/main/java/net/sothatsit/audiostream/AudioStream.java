@@ -4,11 +4,9 @@ import net.sothatsit.audiostream.model.AudioStreamModel;
 import net.sothatsit.audiostream.util.RemovableListener;
 import net.sothatsit.audiostream.view.AudioStreamWindow;
 import net.sothatsit.audiostream.view.AudioStreamTrayIcon;
-import net.sothatsit.audiostream.util.Apple;
 
 import java.awt.*;
 import java.net.InetSocketAddress;
-import java.io.IOException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 
@@ -20,7 +18,7 @@ import java.net.UnknownHostException;
 public class AudioStream {
 
     public static String NAME = "AudioStream";
-    public static String VERSION = "v1.0.0";
+    public static String VERSION = "v1.2";
     public static String TITLE = NAME + " " + VERSION;
     public static Dimension DEFAULT_GUI_SIZE = new Dimension(640, 480);
 
@@ -34,17 +32,11 @@ public class AudioStream {
         } catch (UnknownHostException e) {
             throw new RuntimeException(e);
         }
-
         MULTICAST_SOCKET_ADDRESS = new InetSocketAddress(MULTICAST_ADDRESS, MULTICAST_PORT);
     }
 
-    /**
-     * The number of milliseconds to wait with no communication
-     * before purging a potential server from the servers list.
-     */
-    public static final long SERVER_NO_RESPONSE_PURGE_MS = 15 * 1000;
-
-    public static final int DEFAULT_BUFFER_SIZE = 1024 * 12;
+    public static final int DEFAULT_BUFFER_DELAY_MS = 100;
+    public static final int MAX_BUFFER_DELAY_MS = 10_000;
     public static final double DEFAULT_REPORT_INTERVAL_SECS = 0.5;
 
     private final AudioStreamModel model;
@@ -55,8 +47,8 @@ public class AudioStream {
     private RemovableListener dockListener;
 
     public AudioStream() {
-        if (Apple.isDockIconAvailable()) {
-            Apple.setDockIcon(AudioStreamIcons.AUDIO_STREAM_DOCK_ICON);
+        if (Taskbar.getTaskbar().isSupported(Taskbar.Feature.ICON_IMAGE)) {
+            Taskbar.getTaskbar().setIconImage(AudioStreamIcons.AUDIO_STREAM_DOCK_ICON);
         }
 
         this.model = new AudioStreamModel();
@@ -73,7 +65,7 @@ public class AudioStream {
         trayIcon.addPopupMenuItem(quitItem);
     }
 
-    public synchronized void start() throws IOException {
+    public synchronized void start() {
         if (running)
             throw new IllegalStateException("Already running");
 
@@ -84,12 +76,10 @@ public class AudioStream {
 
         gui.show();
 
-        if (Apple.isDockListenerAvailable()) {
-            dockListener = Apple.addDockListener(gui::show);
-        }
+        dockListener = RemovableListener.createAppReopenedListener(gui::show);
     }
 
-    public synchronized void stop() throws IOException {
+    public synchronized void stop() {
         if (!running)
             throw new IllegalStateException("Not running");
 

@@ -10,6 +10,8 @@ import net.sothatsit.property.Property;
 import java.io.IOException;
 import java.net.Socket;
 import java.net.SocketException;
+import java.util.Arrays;
+import java.util.List;
 
 /**
  * Streams audio from an AudioServer.
@@ -22,12 +24,14 @@ public class AudioServerConnection {
     private final AudioReader reader;
     private final Socket socket;
     private final LoopedThread thread;
+    private final Property<ServiceState> state;
 
     public AudioServerConnection(AudioServerSettings settings, AudioReader reader, Socket socket) {
         this.settings = settings;
         this.reader = reader;
         this.socket = socket;
         this.thread = new LoopedThread("streamingThread", this::stream);
+        this.state = thread.getState();
     }
 
     public void start() {
@@ -41,7 +45,10 @@ public class AudioServerConnection {
     // TODO : Should manage its own state property which inherits errors from the thread's state.
     //        Then could make the starting and stopping states more accurate.
     public Property<ServiceState> getState() {
-        return thread.getState();
+
+        // FIXME : This does not appear to be updating properly, even though it seems
+        //         the LoopedThread is stopping correctly when stopNextLoop is called.
+        return state;
     }
 
     private void stream(Property<Boolean> running) {
@@ -68,9 +75,10 @@ public class AudioServerConnection {
                 outStream.writePacket(packet, 0, packet.length);
             }
         } catch (IOException exception) {
-            // When the other end of the connection is closed this exception will be thrown
+            // When the other end of the connection is closed one of these exceptions will be thrown.
             // TODO : Is there a more robust way to do this than to check an error message?
-            if (SocketException.class.equals(exception.getClass()) && "Broken pipe".equals(exception.getMessage())) {
+            List<String> stopMessages = Arrays.asList("Broken pipe", "Protocol wrong type for socket");
+            if (SocketException.class.equals(exception.getClass()) && stopMessages.contains(exception.getMessage())) {
                 thread.stopNextLoop();
                 return;
             }

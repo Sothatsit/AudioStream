@@ -2,9 +2,9 @@ package net.sothatsit.audiostream.view;
 
 import net.sothatsit.audiostream.AudioStream;
 import net.sothatsit.audiostream.model.AudioStreamModel;
-import net.sothatsit.audiostream.util.Apple;
 
 import javax.swing.*;
+import java.awt.*;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 
@@ -30,12 +30,14 @@ public class AudioStreamWindow {
             }
         });
 
-        EncryptionPanel encryptionPanel = new EncryptionPanel(model);
+        ControlServerPanel controlPanel = new ControlServerPanel(model);
         ClientConfigurationPanel clientPanel = new ClientConfigurationPanel(frame, model);
         ServerConfigurationPanel serverPanel = new ServerConfigurationPanel(model);
+        EncryptionPanel encryptionPanel = new EncryptionPanel(model);
 
         JTabbedPane pane = new JTabbedPane();
 
+        pane.add("Control Server", controlPanel.getComponent());
         pane.add("Audio Receiving", clientPanel.getComponent());
         pane.add("Audio Broadcasting", serverPanel.getComponent());
         pane.add("Encryption", encryptionPanel.getComponent());
@@ -69,8 +71,8 @@ public class AudioStreamWindow {
             frame.setVisible(true);
         }
 
-        if (Apple.isAppleScriptAvailable()) {
-            Apple.invokeAppleScript("tell me to activate");
+        if (Desktop.getDesktop().isSupported(Desktop.Action.APP_REQUEST_FOREGROUND)) {
+            Desktop.getDesktop().requestForeground(true);
         }
 
         frame.toFront();

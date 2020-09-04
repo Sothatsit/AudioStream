@@ -51,7 +51,7 @@ public class AudioClientManager {
     }
 
     public void connectAll(List<RemoteServer> servers) {
-        servers.stream().forEach(this::connect);
+        servers.forEach(this::connect);
     }
 
     public void connect(RemoteServer server) {
@@ -68,7 +68,7 @@ public class AudioClientManager {
 
     public void disconnectAll() {
         List<AudioClient> clientsCopy = new ArrayList<>(clients);
-        clientsCopy.stream().forEach(this::disconnect);
+        clientsCopy.forEach(this::disconnect);
     }
 
     public void disconnect(RemoteServer server) {

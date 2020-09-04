@@ -37,16 +37,15 @@ public class ServerConfigurationPanel extends PropertyPanel {
         Property<Boolean> inSetupMode = Property.not(isServerRunning);
 
         AudioProperties audioProperties = new AudioProperties();
-        Property<String> portString = Property.create("portString", "");
-        Property<Integer> port = portString.map("port", ServerConfigurationPanel::parsePort);
-        Property<Boolean> isPortValid = port.isNotNull("isPortValid");
-        model.controlServerPort.set(port);
 
         Property<Either<AudioServerSettings, String>> serverSettings = Property.map(
                 "serverSettings",
-                audioProperties.mixer, audioProperties.audioFormat, audioProperties.bufferSize, model.encryption,
+                audioProperties.mixer, audioProperties.audioFormat, audioProperties.bufferSizeMS, model.encryption,
                 ServerConfigurationPanel::constructServerSettings
         );
+        Property<String> serverPortString = Either.getLeftOrNull(serverSettings).map("serverPort", settings -> {
+            return settings == null ? "N\\A" : Integer.toString(settings.port);
+        });
         model.audioServerSettings.set(Either.getLeftOrNull(serverSettings));
         Property<Boolean> hasValidServerSettings = Either.isLeft("hasValidServerSettings", serverSettings);
 
@@ -78,52 +77,31 @@ public class ServerConfigurationPanel extends PropertyPanel {
             add(new PropertySeparator("Connection"), constraints.build(4));
             constraints.nextRow();
 
-            { // Port
-                PropertyLabel portLabel = new PropertyLabel("Port");
-                PropertyTextField portField = new PropertyTextField(portString);
+            PropertyLabel statusLabel = new PropertyLabel(status);
+            statusLabel.setForeground(Property.ternary("status_fg", isServerRunning, Color.DARK_GRAY, Color.GRAY));
 
-                portLabel.setForeground(Property.ternary("portLabel_fg", isPortValid, Color.BLACK, Color.RED));
-                portField.setEnabled(inSetupMode);
+            add("Status", constraints.weightX(0).build());
+            add(statusLabel, constraints.build(3));
+            constraints.nextRow();
 
-                add(portLabel, constraints.weightX(0).build());
-                add(portField, constraints.padX(50).build());
-                constraints.nextRow();
-            }
+            PropertyLabel portLabel = new PropertyLabel(serverPortString);
+            portLabel.setForeground(Property.ternary("port_fg", isServerRunning, Color.DARK_GRAY, Color.GRAY));
 
-            { // Connection
-                PropertyLabel statusLabel = new PropertyLabel(status);
-                statusLabel.setForeground(Property.ternary("status_fg", isServerRunning, Color.DARK_GRAY, Color.GRAY));
+            add("Port", constraints.weightX(0).build());
+            add(portLabel, constraints.build(3));
+            constraints.nextRow();
 
-                add("Status", constraints.weightX(0).build());
-                add(statusLabel, constraints.build(3));
-                constraints.nextRow();
+            PropertyButton startButton = new PropertyButton("Start", server::start);
+            PropertyButton stopButton = new PropertyButton("Stop", server::stop);
 
-                PropertyButton startButton = new PropertyButton("Start", () -> {
-                    server.start();
-                    try {
-                        model.start();
-                    } catch (IOException exception) {
-                        GuiUtils.reportError(exception);
-                    }
-                });
-                PropertyButton stopButton = new PropertyButton("Stop", () -> {
-                    server.stop();
-                    try {
-                        model.stop();
-                    } catch (IOException exception) {
-                        GuiUtils.reportError(exception);
-                    }
-                });
+            startButton.setPreferredSize(new Dimension(150, 30));
+            stopButton.setPreferredSize(new Dimension(150, 30));
 
-                startButton.setPreferredSize(new Dimension(150, 30));
-                stopButton.setPreferredSize(new Dimension(150, 30));
+            startButton.setEnabled(Property.and(inSetupMode, hasValidServerSettings));
+            stopButton.setEnabled(isServerRunning);
 
-                startButton.setEnabled(Property.and(inSetupMode, hasValidServerSettings));
-                stopButton.setEnabled(isServerRunning);
-
-                add(GuiUtils.buildCenteredPanel(startButton, stopButton), constraints.build(4));
-                constraints.nextRow();
-            }
+            add(GuiUtils.buildCenteredPanel(startButton, stopButton), constraints.build(4));
+            constraints.nextRow();
         }
 
         { // Empty space
@@ -164,10 +142,12 @@ public class ServerConfigurationPanel extends PropertyPanel {
     /**
      * @return An Either containing a ServerSettings object, or an error String.
      */
-    private static Either<AudioServerSettings, String> constructServerSettings(Mixer.Info mixer,
-                                                                               Either<AudioFormat, String> audioFormatEither,
-                                                                               Integer bufferSize,
-                                                                               Encryption encryption) {
+    private static Either<AudioServerSettings, String> constructServerSettings(
+            Mixer.Info mixer,
+            Either<AudioFormat, String> audioFormatEither,
+            int bufferSizeMS,
+            Encryption encryption) {
+
         if (mixer == null)
             return Either.right("Please select a mixer");
         if (audioFormatEither.isRight())
@@ -177,10 +157,8 @@ public class ServerConfigurationPanel extends PropertyPanel {
         if (!AudioUtils.isAudioFormatSupported(AudioType.INPUT, mixer, format))
             return Either.right("Unsupported audio format");
 
-        int bufferSizeBytes = (bufferSize != null ? bufferSize : AudioStream.DEFAULT_BUFFER_SIZE);
         double reportIntervalSecs = AudioStream.DEFAULT_REPORT_INTERVAL_SECS;
 
-        // TODO : This seems like a wasteful way to find a free port
         int port;
         try (ServerSocket portSocket = new ServerSocket(0)) {
             port = portSocket.getLocalPort();
@@ -188,6 +166,7 @@ public class ServerConfigurationPanel extends PropertyPanel {
             throw new RuntimeException(e);
         }
 
+        int bufferSizeBytes = AudioServer.getBufferSizeBytes(format, bufferSizeMS);
         AudioServerSettings settings = new AudioServerSettings(
                 format,
                 mixer,

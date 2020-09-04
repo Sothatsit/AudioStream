@@ -8,6 +8,9 @@ import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
+// TODO : Keep a timestamp with every change event, and keep track of the last updated time.
+//        Then can ignore old, stale change events.
+
 /**
  * A property whose value is mapped from the value of other Properties.
  *

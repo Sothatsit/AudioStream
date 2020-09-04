@@ -7,6 +7,7 @@ import net.sothatsit.audiostream.communication.packet.PacketBuilder;
 import net.sothatsit.audiostream.communication.packet.PacketReader;
 import net.sothatsit.audiostream.communication.packet.PacketType;
 import net.sothatsit.audiostream.model.RemoteServerDetails;
+import net.sothatsit.audiostream.util.Exceptions;
 import net.sothatsit.audiostream.util.LoopedThread;
 import net.sothatsit.property.Property;
 
@@ -25,6 +26,7 @@ import java.util.function.Consumer;
  */
 public class ControlServer {
 
+    private static final boolean DEBUG_REPORT_PACKETS = false;
     private static final int BROADCAST_INTERVAL_MS = 3 * 1000;
 
     private final Multicast multicast;
@@ -33,13 +35,11 @@ public class ControlServer {
     private final Property<RemoteServerDetails> serverDetails;
     private final List<Consumer<RemoteServerDetails>> discoveryListeners;
 
-    public ControlServer(int serverPort,
-                         Property<RemoteServerDetails> serverDetails) {
-
-        this.multicast = new Multicast("discovery-multicast", AudioStream.MULTICAST_SOCKET_ADDRESS);
-        this.server = new TCPServer("discovery-server", serverPort);
+    public ControlServer(int serverPort, Property<RemoteServerDetails> serverDetails) {
+        this.multicast = new Multicast("controlMulticast", AudioStream.MULTICAST_SOCKET_ADDRESS);
+        this.server = new TCPServer("controlServer", serverPort);
         this.broadcastThread = new LoopedThread(
-                "discovery-broadcast", this::broadcastDetailsRequest, BROADCAST_INTERVAL_MS
+                "controlBroadcastThread", this::broadcastDetailsRequest, BROADCAST_INTERVAL_MS
         );
         this.serverDetails = serverDetails;
         this.discoveryListeners = new CopyOnWriteArrayList<>();
@@ -65,9 +65,7 @@ public class ControlServer {
     }
 
     public void close() throws IOException {
-        broadcastThread.stop();
-        multicast.close();
-        server.close();
+        Exceptions.closeManyIO(multicast, server, broadcastThread);
     }
 
     private byte[] createRequestPacket() throws IOException {
@@ -88,6 +86,10 @@ public class ControlServer {
 
     public void broadcastDetailsRequest() {
         try {
+            if (DEBUG_REPORT_PACKETS) {
+                System.err.println("ControlServer: broadcastDetailsRequest " + serverDetails.get());
+            }
+
             multicast.broadcast(createRequestPacket());
         } catch (IOException exception) {
             String exceptionString = exception.getClass() + ": " + exception.getMessage();
@@ -97,6 +99,10 @@ public class ControlServer {
 
     public void broadcastDetails() {
         try {
+            if (DEBUG_REPORT_PACKETS) {
+                System.err.println("ControlServer: broadcastDetails");
+            }
+
             multicast.broadcast(createResponsePacket());
         } catch (IOException exception) {
             exception.printStackTrace();
@@ -107,6 +113,10 @@ public class ControlServer {
 
     public void sendDetailsRequest(InetSocketAddress address) {
         try {
+            if (DEBUG_REPORT_PACKETS) {
+                System.err.println("ControlServer: sendDetailsRequest to " + address);
+            }
+
             server.send(createRequestPacket(), address);
         } catch (IOException exception) {
             String exceptionString = exception.getClass() + ": " + exception.getMessage();
@@ -120,6 +130,11 @@ public class ControlServer {
         try {
             reader = PacketReader.create(packet);
             type = reader.readType();
+
+            if (DEBUG_REPORT_PACKETS) {
+                System.err.println("ControlServer: receivePacket " + type + " from "
+                        + packet.getSocketAddress() + " of size " + packet.getLength() + " bytes");
+            }
         } catch (IOException exception) {
             String exceptionString = exception.getClass() + ": " + exception.getMessage();
             System.err.println("Error reading discovery response packet, " + exceptionString);
@@ -150,13 +165,13 @@ public class ControlServer {
             return;
         }
 
-        InetSocketAddress address = new InetSocketAddress(remoteAddress, port);
+        InetSocketAddress socketAddress = new InetSocketAddress(remoteAddress, port);
 
         try {
-            server.send(createResponsePacket(), address);
+            server.send(createResponsePacket(), socketAddress);
         } catch (IOException exception) {
             String exceptionString = exception.getClass() + ": " + exception.getMessage();
-            System.err.println("Error sending discovery response packet, " + exceptionString);
+            System.err.println("Error sending discovery response packet to " + socketAddress + ", " + exceptionString);
             return;
         }
     }
@@ -175,12 +190,10 @@ public class ControlServer {
             try {
                 listener.accept(remoteServerDetails);
             } catch (Exception exception) {
-                StringBuilder errorMessage = new StringBuilder();
-                errorMessage.append("Error passing discovered server details to listener ");
-                errorMessage.append(listener.getClass());
-                errorMessage.append(", ");
-                errorMessage.append(exception.getClass()).append(": ").append(exception.getMessage());
-                System.err.println(errorMessage);
+                System.err.println(
+                        "Error passing discovered server details to listener " + listener.getClass()
+                        + ", " + exception.getClass() + ": " + exception.getMessage()
+                );
             }
         }
     }

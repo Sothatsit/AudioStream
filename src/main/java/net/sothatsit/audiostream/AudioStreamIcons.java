@@ -25,7 +25,7 @@ public class AudioStreamIcons {
         AUDIO_STREAM_DOCK_ICON = readResourceImage("/icon.png");
         UNENCRYPTED_ICON = readResourceIcon("/unencrypted.png");
         ENCRYPTED_ICON = readResourceIcon("/encrypted.png");
-        UNKNOWN_ENCRYPTION_ICON = readResourceIcon("/encryption_unlockable.png");
+        UNKNOWN_ENCRYPTION_ICON = readResourceIcon("/encryption_unknown.png");
 
         int serverStatusIconSize = 12;
         SERVER_STATUS_ERRORED_ICON = createServerStatusIcon(Color.RED, serverStatusIconSize);

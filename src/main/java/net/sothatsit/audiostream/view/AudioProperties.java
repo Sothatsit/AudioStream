@@ -3,6 +3,7 @@ package net.sothatsit.audiostream.view;
 import net.sothatsit.audiostream.AudioStream;
 import net.sothatsit.audiostream.audio.AudioUtils;
 import net.sothatsit.audiostream.config.SerializableMap;
+import net.sothatsit.property.Attribute;
 import net.sothatsit.property.MappedProperty;
 import net.sothatsit.property.NonNullProperty;
 import net.sothatsit.property.Property;
@@ -24,7 +25,7 @@ public class AudioProperties extends SerializableMap {
     public final NonNullProperty<Float> sampleRate;
     public final NonNullProperty<Integer> sampleSize;
     public final NonNullProperty<Integer> channels;
-    public final NonNullProperty<Integer> bufferSize;
+    public final Attribute<Integer> bufferSizeMS;
 
     public final Property<Either<AudioFormat, String>> audioFormat;
     public final Property<Boolean> isValidAudioFormat;
@@ -40,7 +41,7 @@ public class AudioProperties extends SerializableMap {
         this.sampleRate = createNonNullProperty("sampleRate", 48000f);
         this.sampleSize = createNonNullProperty("sampleSize", 24);
         this.channels = createNonNullProperty("channels", 2);
-        this.bufferSize = createNonNullProperty("bufferSize", AudioStream.DEFAULT_BUFFER_SIZE);
+        this.bufferSizeMS = Attribute.createNonNull("bufferSizeMS", AudioStream.DEFAULT_BUFFER_DELAY_MS);
 
         this.audioFormat = MappedProperty.mapMany(
                 "format", this::generateAudioFormat,

@@ -12,6 +12,7 @@ import net.sothatsit.audiostream.encryption.EncryptionVerification;
 import net.sothatsit.property.Attribute;
 import net.sothatsit.property.Property;
 import net.sothatsit.property.SelfMappedProperty;
+import net.sothatsit.property.awt.GuiUtils;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -23,6 +24,7 @@ import java.net.InetSocketAddress;
  */
 public class AudioStreamModel {
 
+    // TODO : Remove this
     public final Property<Boolean> running;
 
     public final Attribute<EncryptionSettings> encryptionSettings;
@@ -53,11 +55,14 @@ public class AudioStreamModel {
         this.audioServer = new AudioServer(audioServerSettings);
 
         this.controlServerPort = Attribute.createNullable("controlServerPort");
-        this.localAudioServerDetails = audioServerSettings.map("localAudioServerDetails", settings -> {
-            if (settings == null)
-                return null;
-            InetSocketAddress address = new InetSocketAddress(settings.port);
-           return new RemoteAudioServerDetails(address, settings.format);
+        this.localAudioServerDetails = Property.map(
+                "localAudioServerDetails",
+                audioServerSettings, audioServer.isRunning(),
+                (settings, running) -> {
+                    if (settings == null || !running)
+                        return null;
+                    InetSocketAddress address = new InetSocketAddress(settings.port);
+                   return new RemoteAudioServerDetails(address, settings.format);
         });
         this.localServerDetails = Property.map(
                 "localServerDetails", controlServerPort, localAudioServerDetails, encryptionVerification,
@@ -74,27 +79,31 @@ public class AudioStreamModel {
                 "controlServer", running, controlServerPort, this::updateControlServer
         );
         this.remoteServerIndex = new RemoteServerIndex(controlServer);
+        this.remoteServerIndex.start(); // TODO : This is never stopped, and shouldn't really be started here
 
         this.audioClientSettings = Attribute.createNullable("audioClientSettings");
         this.audioClientManager = new AudioClientManager(audioClientSettings);
     }
 
-    public synchronized void start() throws IOException {
+    // TODO : This is the model, it shouldn't be handling this logic
+    public synchronized void start() {
         if (running.get())
             throw new IllegalStateException("Already started");
 
         running.set(true);
-        remoteServerIndex.start();
     }
 
-    public synchronized void stop() throws IOException {
+    // TODO : This is the model, it shouldn't be handling this logic
+    public synchronized void stop() {
         if (!running.get())
             throw new IllegalStateException("Not running");
 
         running.set(false);
-        remoteServerIndex.stop();
     }
 
+    // TODO : This is the model, it shouldn't be handling this logic
+    //        Either a new class should be made that itself recreates the ControlServer,
+    //        or the ControlServer should take the port as a Property.
     private ControlServer updateControlServer(ControlServer previousServer, boolean running, Integer port) {
         // Close down the previous server
         if (previousServer != null) {
@@ -115,13 +124,7 @@ public class AudioStreamModel {
         try {
             newServer.open();
         } catch (IOException exception) {
-            String exceptionString = exception.getClass() + ": " + exception.getMessage();
-            System.err.println("Error opening control server, " + exceptionString);
-
-            try {
-                newServer.close();
-            } catch (IOException ignored) {}
-
+            GuiUtils.reportError(exception);
             return null;
         }
 

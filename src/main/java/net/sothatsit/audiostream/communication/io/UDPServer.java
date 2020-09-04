@@ -1,5 +1,6 @@
 package net.sothatsit.audiostream.communication.io;
 
+import net.sothatsit.audiostream.util.Exceptions;
 import net.sothatsit.audiostream.util.LoopedThread;
 import net.sothatsit.audiostream.util.ServiceState;
 import net.sothatsit.property.Property;
@@ -7,6 +8,8 @@ import net.sothatsit.property.Property;
 import java.io.IOException;
 import java.net.*;
 import java.nio.BufferOverflowException;
+import java.nio.ByteBuffer;
+import java.nio.channels.DatagramChannel;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Consumer;
@@ -16,7 +19,7 @@ import java.util.function.Consumer;
  *
  * @author Paddy Lamont
  */
-public class UDPServer {
+public class UDPServer implements AutoCloseable {
 
     private static final int MAX_PACKET_SIZE = 10 * 1024;
 
@@ -24,7 +27,7 @@ public class UDPServer {
     private final List<Consumer<DatagramPacket>> listeners;
 
     private final InetSocketAddress address;
-    private DatagramSocket socket;
+    private DatagramChannel socket;
 
     public UDPServer(String name, InetSocketAddress address) {
         this.address = address;
@@ -55,17 +58,19 @@ public class UDPServer {
         if (socket != null)
             throw new IllegalStateException("Service already started");
 
-        socket = new DatagramSocket(address);
+        socket = DatagramChannel.open();
+        socket.bind(address);
+
         receiverThread.start();
     }
 
+    @Override
     public void close() throws IOException {
         if (socket == null)
             throw new IllegalStateException("Service has already been stopped");
 
-        receiverThread.stop();
+        Exceptions.closeManyIO(receiverThread, socket);
 
-        socket.close();
         socket = null;
     }
 
@@ -77,14 +82,15 @@ public class UDPServer {
         if (bytes.length >= MAX_PACKET_SIZE)
             throw new IllegalArgumentException("bytes exceeds maximum packet size, " + MAX_PACKET_SIZE);
 
-        socket.send(new DatagramPacket(bytes, bytes.length, address));
+        socket.send(ByteBuffer.wrap(bytes), address);
     }
 
     private DatagramPacket receivePacket() throws IOException {
-        byte[] buffer = new byte[MAX_PACKET_SIZE];
-        DatagramPacket packet = new DatagramPacket(buffer, buffer.length);
+        byte[] array = new byte[MAX_PACKET_SIZE];
+        ByteBuffer buffer = ByteBuffer.wrap(array);
+        SocketAddress address = socket.receive(buffer);
 
-        socket.receive(packet);
+        DatagramPacket packet = new DatagramPacket(array, 0, buffer.limit(), address);
 
         // Reject packets of the maximum size under
         // the assumption that they were truncated

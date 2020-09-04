@@ -9,7 +9,7 @@ import java.util.function.Consumer;
  *
  * @author Paddy Lamont
  */
-public class LoopedThread {
+public class LoopedThread implements AutoCloseable {
 
     protected final String name;
     protected final Consumer<Property<Boolean>> task;
@@ -77,11 +77,19 @@ public class LoopedThread {
 
         state.setToStarting("Starting thread", false);
 
-        thread = new Thread(this::runLoop);
+        thread = new Thread(null, this::runLoop, "LoopedThread-" + name);
         thread.setDaemon(daemon);
 
         enabled.set(true);
         thread.start();
+    }
+
+    /**
+     * See {@link #stop()}.
+     */
+    @Override
+    public void close() {
+        stop();
     }
 
     /**
@@ -119,8 +127,10 @@ public class LoopedThread {
         long start = System.currentTimeMillis();
 
         try {
+            long timeoutPerJoin = (timeout + 1) / 2;
+            thread.join(timeoutPerJoin);
             thread.interrupt();
-            thread.join(timeout);
+            thread.join(timeoutPerJoin);
         } catch (InterruptedException e) {
             throw new RuntimeException("Interrupted waiting for LoopedThread " + name + " to finish", e);
         } finally {
@@ -139,6 +149,7 @@ public class LoopedThread {
             }
 
             thread = null;
+            state.setToStopped("Stopped");
         }
     }
 
@@ -192,10 +203,19 @@ public class LoopedThread {
 
         long sleepUntil = System.nanoTime() + delay * 1000000;
 
+        // Sleep until
         sleepLoop: while (System.nanoTime() < sleepUntil) {
             try {
-                Thread.sleep(delay);
+                long delay = sleepUntil - System.nanoTime();
+                if (delay <= 0)
+                    break;
+
+                Thread.sleep(delay / 1000000, (int) (delay % 1000000));
             } catch (InterruptedException e) {
+                // If this thread has been stopped, just exit
+                if (!enabled.get())
+                    return;
+
                 switch (interruptStrategy) {
                     case SKIP_WAIT:
                         break sleepLoop;
@@ -244,7 +264,7 @@ public class LoopedThread {
     }
 
     /**
-     * Strategy to take when thread is interrupted.
+     * Strategy to take when the thread is interrupted during waits between task executions.
      */
     public enum InterruptStrategy {
         /**

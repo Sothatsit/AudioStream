@@ -7,6 +7,10 @@ import net.sothatsit.property.Property;
 import java.io.IOException;
 import java.net.*;
 import java.nio.BufferOverflowException;
+import java.nio.ByteBuffer;
+import java.nio.channels.AsynchronousCloseException;
+import java.nio.channels.ClosedByInterruptException;
+import java.nio.channels.DatagramChannel;
 import java.util.Enumeration;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -17,7 +21,7 @@ import java.util.function.Consumer;
  *
  * @author Paddy Lamont
  */
-public class Multicast {
+public class Multicast implements AutoCloseable {
 
     private static final int MAX_PACKET_SIZE = 10 * 1024;
 
@@ -25,13 +29,13 @@ public class Multicast {
     private final List<Consumer<DatagramPacket>> listeners;
 
     private final InetSocketAddress address;
-    private MulticastSocket receiverSocket;
-    private DatagramSocket publisherSocket;
+    private DatagramChannel receiverSocket;
+    private DatagramChannel publisherSocket;
 
     public Multicast(String name, InetSocketAddress address) {
         this.address = address;
 
-        this.receiverThread = new LoopedThread(name + "-multicast-processing", this::processNext);
+        this.receiverThread = new LoopedThread(name + "-receiverThread", this::processNext);
         this.listeners = new CopyOnWriteArrayList<>();
     }
 
@@ -81,17 +85,17 @@ public class Multicast {
         if (networkInterface == null)
             throw new IllegalStateException("Could not find valid network interface");
 
-        receiverSocket = new MulticastSocket(null);
-        publisherSocket = new DatagramSocket();
+        receiverSocket = DatagramChannel.open(StandardProtocolFamily.INET);
+        publisherSocket = DatagramChannel.open(StandardProtocolFamily.INET);
 
-        receiverSocket.setReuseAddress(true);
+        receiverSocket.setOption(StandardSocketOptions.SO_REUSEADDR, true);
         receiverSocket.bind(address);
-        receiverSocket.setNetworkInterface(networkInterface);
-        receiverSocket.joinGroup(address.getAddress());
+        receiverSocket.join(address.getAddress(), networkInterface);
 
         receiverThread.start();
     }
 
+    @Override
     public void close() throws IOException {
         if (receiverSocket == null)
             throw new IllegalStateException("Multicast has already been stopped");
@@ -115,19 +119,24 @@ public class Multicast {
         if (bytes.length >= MAX_PACKET_SIZE)
             throw new IllegalArgumentException("bytes exceeds maximum packet size, " + MAX_PACKET_SIZE);
 
-        publisherSocket.send(new DatagramPacket(bytes, bytes.length, address));
+        publisherSocket.send(ByteBuffer.wrap(bytes), address);
     }
 
     private DatagramPacket receivePacket() throws IOException {
-        byte[] buffer = new byte[MAX_PACKET_SIZE];
-        DatagramPacket packet = new DatagramPacket(buffer, buffer.length);
+        byte[] array = new byte[MAX_PACKET_SIZE];
+        ByteBuffer buffer = ByteBuffer.wrap(array);
+        SocketAddress address = receiverSocket.receive(buffer);
 
-        receiverSocket.receive(packet);
+        DatagramPacket packet = new DatagramPacket(array, 0, buffer.position(), address);
 
         // Reject packets of the maximum size under
         // the assumption that they were truncated
-        if (packet.getLength() >= MAX_PACKET_SIZE)
-            throw new BufferOverflowException();
+        if (packet.getLength() >= MAX_PACKET_SIZE) {
+            throw new IOException(
+                    "Packet length " + packet.getLength() + " exceeds maximum packet size " + MAX_PACKET_SIZE,
+                    new BufferOverflowException()
+            );
+        }
 
         return packet;
     }
@@ -136,6 +145,9 @@ public class Multicast {
         DatagramPacket packet;
         try {
             packet = receivePacket();
+        } catch (ClosedByInterruptException exception) {
+            // Interrupts are used to stop the multicast receiver thread
+            return;
         } catch (Exception exception) {
             String exceptionString = exception.getClass() + ": " + exception.getMessage();
             System.err.println("Error receiving multicast, " + exceptionString);
@@ -149,6 +161,7 @@ public class Multicast {
                 String listenerString = listener.getClass().toString();
                 String exceptionString = exception.getClass() + ": " + exception.getMessage();
                 System.err.println("Error passing multicast to listener " + listenerString + ", " + exceptionString);
+                exception.printStackTrace();
             }
         }
     }

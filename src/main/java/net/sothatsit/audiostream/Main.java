@@ -13,7 +13,7 @@ public class Main {
         System.exit(1);
     }
 
-    public static void main(String[] args) throws Exception {
+    public static void main(String[] args) {
         if (args.length != 0) {
             displayUsage();
             return;
